@@ -1,0 +1,106 @@
+# Cline Project Rules: Gorlea Tasks
+
+## Project Patterns
+
+### UI/UX Conventions
+- Layout should be centered for improved readability
+- Clean, minimal UI is preferred over complex or cluttered interfaces
+- Dark mode and light mode should be fully supported with consistent styling
+- Mobile experience is as important as desktop experience
+- All UI changes should be responsive and work across device sizes
+
+### Code Conventions
+- Vanilla JavaScript is used throughout (no frameworks)
+- ES6+ features are preferred when browser support allows
+- CSS uses custom properties (variables) for theming
+- Firebase is the primary backend service
+- Comments should document functionality and complex logic
+
+### AI Integration Patterns
+- Always provide fallback algorithms for core AI features
+- Include timeouts for all API calls to prevent UI freezes
+- Gracefully degrade AI functionality when offline
+- Store API keys securely, with user API keys in localStorage
+- Always show clear feedback when AI processing is happening
+
+### Task Data Structure
+- Tasks must include: id, title, createdAt, completed, priority fields
+- Optional task fields: description, dueDate, dueTime, category, notes
+- Tasks are stored in Firebase with device ID for reference
+- Priority should be one of: "high", "medium", "low"
+- Due dates should be in ISO format (YYYY-MM-DD)
+
+## User Preferences
+
+### Task Management
+- Natural language input is strongly preferred over form filling
+- Task details should be visible without requiring extra clicks
+- Completed tasks should auto-hide by default (implemented via filter dropdown)
+- Tasks should be grouped logically (by date/priority)
+- Search and filter options should be easily accessible
+- Filter dropdown preferred over multiple filter buttons
+
+### Visual Design
+- Clean, minimal aesthetic with adequate whitespace
+- Centered container layout with max-width (650px)
+- Color coding for priorities (red for high, yellow for medium, blue for low)
+- Color-coded left borders on task items for visual priority indication
+- Dark mode should use true dark backgrounds (#121212) not just gray
+- Interactive elements should have clear hover/active states
+- Custom scrollbars for scrollable containers
+- Card-based components with consistent styling (borders, shadows, padding)
+- Consistent spacing with standardized gap measurements
+
+## Implementation Guidelines
+
+### Firebase Integration
+- Always check online status before Firebase operations
+- Provide clear feedback for synchronization status
+- Handle offline scenarios gracefully
+- Include retry logic for failed operations
+- Use device IDs to help with data management
+
+### AI Features
+- Balance between client-side and server-side AI processing
+- Local fallback algorithms for core functionality
+- Clear feedback during AI processing (spinners, status messages)
+- Don't block UI during AI operations
+- Throttle expensive AI operations when appropriate
+- Modern chat interface with clear visual distinction between user and AI messages
+
+## Security Guidelines
+
+### API Key Handling
+- OpenAI API keys must be treated as sensitive credentials
+  - Store only in localStorage, never in code
+  - Only transmit directly to OpenAI API
+  - Prompt user to enter their own key
+- Firebase API keys can be included in client-side code
+  - These are designed for client use with security rules
+  - Not considered sensitive like OpenAI keys
+  - Firebase security is based on server-side rules, not API key secrecy
+- Clear distinction between public API keys (Firebase) and private API keys (OpenAI)
+
+### GitHub Pages Deployment
+- No sensitive credentials should be hardcoded for GitHub Pages deployment
+- Only prompt for truly sensitive credentials (OpenAI API key)
+- Firebase configuration can remain in code for ease of use
+- Documentation should clearly explain security approach
+
+### Performance Considerations
+- Keep initial load time under 3 seconds
+- Optimize rendering for large task lists
+- Minimize Firebase read/write operations
+- Use service worker caching effectively
+- Lazy load non-critical resources
+
+## Testing Checklist
+
+Before deploying changes:
+1. Test natural language task parsing with various inputs
+2. Verify task synchronization across devices
+3. Check offline functionality
+4. Test on both mobile and desktop viewports
+5. Verify dark/light mode switching
+6. Ensure all Firebase operations work correctly
+7. Test the behavior of the AI assistant

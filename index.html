@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda</title>
+    <!-- PWA Support -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Gorlea">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <!-- Link to external CSS file -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container centered-container">
+        <!-- Logo at top -->
+        <div class="logo">
+            <img src="assets/gorlea-tasks-logo-no-background.png" alt="Gorlea Tasks">
+            <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="checkbox">
+                    <input type="checkbox" id="checkbox" />
+                    <div class="slider"></div>
+                </label>
+                <i id="theme-icon" class="fas fa-moon theme-icon"></i>
+            </div>
+        </div>
+        
+        <!-- Task input with icon button -->
+        <div class="task-input">
+            <textarea id="task-input" placeholder="Enter your task in natural language (e.g., 'Call John tomorrow about the project update')"></textarea>
+            <div class="input-processing" id="input-processing"></div>
+            <button id="add-task-btn" class="icon-button">
+                <i class="fas fa-plus"></i>
+            </button>
+            <div id="task-feedback" class="feedback"></div>
+        </div>
+        
+        <!-- Search and filter -->
+        <div class="search-filter">
+            <input type="text" id="search-input" class="search-input" placeholder="Search tasks...">
+            <select id="filter-dropdown" class="filter-dropdown">
+                <option value="all">All Tasks</option>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="high">High Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="low">Low Priority</option>
+            </select>
+        </div>
+        
+        <!-- Scrollable task container -->
+        <div class="task-list-container scrollable">
+            <div id="task-list" class="task-list"></div>
+        </div>
+        
+        <!-- Chat interface (Claude/ChatGPT style) -->
+        <div class="chat-container">
+            <div class="chat-header">Gorlea</div>
+            <div id="chat-messages" class="chat-messages">
+                <div class="message ai-message">
+                    Hello! I'm Gorlea, your personal assistant. I can help you manage your tasks, answer questions, or provide productivity tips. How can I help you today?
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <input type="text" id="chat-input" class="chat-input" placeholder="Ask me anything...">
+                <button id="chat-send-btn" class="chat-send-btn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <!-- Main App Script -->
+    <script src="app.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
+
+    <!-- 
+    SETUP INSTRUCTIONS:
+    
+    1. File Structure:
+       - index.html (this file)
+       - styles.css (contains all styles)
+       - app.js (contains all JavaScript functionality)
+       - manifest.json (for PWA support)
+       - service-worker.js (for offline functionality)
+       - firebase.json (Firebase configuration)
+    
+    2. Deploy Options:
+       - Local Testing: Open index.html directly in a browser
+       - Firebase Hosting: Run 'firebase deploy' to deploy to Firebase Hosting
+       - GitHub Pages: Upload all files to a GitHub repository and enable GitHub Pages
+    
+    3. API Configuration:
+       - OpenAI API key is defined in app.js (stored in localStorage)
+       - Firebase configuration is in app.js (already configured)
+    
+    4. Features:
+       - Natural language task parsing
+       - Task management (add, edit, delete, complete)
+       - AI-powered suggestions
+       - Cloud synchronization across devices
+       - Dark mode
+       - Progressive Web App (PWA) support
+       - Offline functionality
+    -->
+</body>
+</html>

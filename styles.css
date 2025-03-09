@@ -1,0 +1,641 @@
+/* Variables and Theming */
+:root {
+    --primary-color: #4a6fa5;
+    --secondary-color: #166088;
+    --accent-color: #02a9f7;
+    --light-color: #e6f4f1;
+    --dark-color: #333;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --gray-color: #6c757d;
+    --light-gray: #f8f9fa;
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    
+    /* Background and text colors */
+    --bg-color: var(--light-color);
+    --text-color: var(--dark-color);
+    --card-bg: white;
+    --card-border: rgba(0, 0, 0, 0.1);
+    --hover-color: rgba(0, 0, 0, 0.05);
+    --input-bg: white;
+    --input-text: var(--dark-color);
+    --input-border: #ccc;
+    --filter-btn-bg: var(--light-gray);
+    --filter-btn-text: var(--dark-color);
+    --filter-btn-active-text: white;
+}
+
+/* Dark Theme */
+[data-theme="dark"] {
+    --bg-color: #121212;
+    --text-color: #e0e0e0;
+    --card-bg: #1e1e1e;
+    --card-border: rgba(255, 255, 255, 0.1);
+    --light-gray: #2a2a2a;
+    --hover-color: rgba(255, 255, 255, 0.05);
+    --input-bg: #333;
+    --input-text: #e0e0e0;
+    --input-border: #555;
+    --filter-btn-bg: #333;
+    --filter-btn-text: #e0e0e0;
+}
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    line-height: 1.6;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    padding: 0;
+    margin: 0;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Layout */
+.container {
+    padding: 20px;
+}
+
+.centered-container {
+    max-width: 650px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Logo Section */
+.logo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.logo img {
+    height: 40px;
+    object-fit: contain;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow: hidden;
+}
+
+/* Task Input Section */
+.task-input {
+    background-color: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    position: relative;
+}
+
+.task-input textarea {
+    flex: 1 1 85%;
+    padding: 10px;
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    font-size: 1rem;
+    min-height: 60px;
+    resize: vertical;
+    font-family: var(--font-family);
+    background-color: var(--input-bg);
+    color: var(--input-text);
+}
+
+.icon-button {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 1rem;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.icon-button:hover {
+    background-color: var(--secondary-color);
+}
+
+.task-input .feedback {
+    flex: 1 0 100%;
+}
+
+.input-processing {
+    flex: 1 0 100%;
+}
+
+/* Search and Filters */
+.search-filter {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: var(--input-bg);
+    color: var(--input-text);
+}
+
+.filter-dropdown {
+    padding: 8px 12px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    cursor: pointer;
+    min-width: 140px;
+}
+
+/* Task List */
+.task-list-container {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+}
+
+.task-list-container.scrollable {
+    max-height: 350px;
+    overflow-y: auto;
+    border: 1px solid var(--input-border);
+    background-color: var(--bg-color);
+}
+
+/* Add subtle scrollbar styling */
+.task-list-container.scrollable::-webkit-scrollbar {
+    width: 8px;
+}
+
+.task-list-container.scrollable::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+}
+
+.task-list-container.scrollable::-webkit-scrollbar-thumb {
+    background-color: var(--gray-color);
+    border-radius: 4px;
+}
+
+.no-tasks {
+    text-align: center;
+    color: var(--gray-color);
+    margin: 2rem 0;
+}
+
+.task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.task-group {
+    margin-bottom: 20px;
+}
+
+.group-header {
+    font-weight: bold;
+    color: var(--secondary-color);
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+}
+
+.task-item {
+    background-color: var(--light-gray);
+    border-left: 4px solid var(--primary-color);
+    border-radius: 4px;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.task-item.completed {
+    background-color: #f0f0f0;
+    border-left-color: var(--success-color);
+    opacity: 0.7;
+}
+
+.task-item.completed .task-title {
+    text-decoration: line-through;
+    color: var(--gray-color);
+}
+
+.task-item.high-priority {
+    border-left-color: var(--danger-color);
+}
+
+.task-item.medium-priority {
+    border-left-color: var(--warning-color);
+}
+
+.task-item.low-priority {
+    border-left-color: var(--accent-color);
+}
+
+.task-content {
+    flex: 1;
+}
+
+.task-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.task-details {
+    font-size: 0.85rem;
+    color: var(--gray-color);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.task-detail {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.task-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.task-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--gray-color);
+    transition: color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+}
+
+.task-btn:hover {
+    color: var(--dark-color);
+}
+
+.task-btn.complete-btn:hover {
+    color: var(--success-color);
+}
+
+.task-btn.edit-btn:hover {
+    color: var(--primary-color);
+}
+
+.task-btn.delete-btn:hover {
+    color: var(--danger-color);
+}
+
+/* Chat Container (ChatGPT/Claude style) */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--card-bg);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+}
+
+.chat-header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 1rem;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Theme Switch */
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.theme-switch {
+    display: inline-block;
+    height: 24px;
+    position: relative;
+    width: 48px;
+}
+
+.theme-switch input {
+    display: none;
+}
+
+.slider {
+    background-color: #ccc;
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    background-color: white;
+    bottom: 4px;
+    content: "";
+    height: 16px;
+    left: 4px;
+    position: absolute;
+    transition: .4s;
+    width: 16px;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--accent-color);
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+
+.theme-icon {
+    margin-left: 8px;
+    color: var(--text-color);
+}
+
+/* Chat Messages */
+.chat-messages {
+    height: 250px;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: var(--bg-color);
+}
+
+.message {
+    padding: 10px 15px;
+    border-radius: 18px;
+    max-width: 80%;
+    margin-bottom: 5px;
+    word-wrap: break-word;
+}
+
+.user-message {
+    background-color: var(--accent-color);
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 5px;
+}
+
+.ai-message {
+    background-color: var(--light-gray);
+    color: var(--text-color);
+    align-self: flex-start;
+    border-bottom-left-radius: 5px;
+}
+
+.chat-input-container {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid var(--card-border);
+    background-color: var(--card-bg);
+}
+
+.chat-input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid var(--input-border);
+    border-radius: 20px;
+    font-size: 1rem;
+    font-family: var(--font-family);
+    background-color: var(--input-bg);
+    color: var(--input-text);
+}
+
+.chat-send-btn {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-left: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+}
+
+.chat-send-btn:hover {
+    background-color: var(--secondary-color);
+}
+
+/* Loading Indicators */
+.loading {
+    text-align: center;
+    padding: 1rem;
+    color: var(--gray-color);
+}
+
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
+    margin-right: 10px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Task Editing Form */
+.task-edit-form {
+    margin-top: 10px;
+}
+
+.task-edit-form input,
+.task-edit-form select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--input-text);
+}
+
+.date-time-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.date-time-container input {
+    margin-bottom: 0;
+}
+
+.task-edit-form textarea {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    min-height: 100px;
+    font-family: var(--font-family);
+}
+
+.task-edit-form button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.task-edit-form button.cancel {
+    background-color: var(--gray-color);
+}
+
+/* Suggested Follow-up */
+.suggested-follow-up {
+    background-color: rgba(74, 111, 165, 0.1);
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+.suggested-follow-up-title {
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.suggested-follow-up-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.add-suggestion-btn {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+/* Feedback Messages */
+.feedback {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.feedback.success {
+    background-color: rgba(40, 167, 69, 0.1);
+    color: var(--success-color);
+}
+
+.feedback.error {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: var(--danger-color);
+}
+
+.feedback.warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    color: var(--warning-color);
+}
+
+.feedback.info {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: var(--primary-color);
+}
+
+/* Task Notes */
+.task-notes {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    color: var(--text-color);
+    border-left: 3px solid var(--accent-color);
+    padding-left: 10px;
+    margin-left: 2px;
+}
+
+.notes-content {
+    white-space: pre-line;
+    margin-top: 4px;
+    margin-left: 4px;
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .centered-container {
+        width: 100%;
+        padding: 10px;
+    }
+    
+    .logo img {
+        height: 30px;
+    }
+    
+    .task-input {
+        padding: 1rem;
+    }
+    
+    .task-list-container.scrollable {
+        max-height: 300px;
+    }
+    
+    .chat-messages {
+        height: 200px;
+    }
+}
