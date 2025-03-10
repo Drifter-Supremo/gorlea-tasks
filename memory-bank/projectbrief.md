@@ -32,6 +32,7 @@ Gorlea Tasks is an AI-powered task management application that helps users organ
 
 ## Key Features
 - Natural language task parsing
+- Enhanced date understanding through rich contextual approach
 - Smart prioritization and date detection
 - AI-generated follow-up suggestions
 - Task filtering and searching
@@ -43,7 +44,8 @@ Gorlea Tasks is an AI-powered task management application that helps users organ
 
 ## Success Criteria
 1. Users can add tasks using natural language with 90%+ parsing accuracy
-2. Tasks synchronize reliably across devices with minimal latency
-3. UI remains responsive and functional on mobile and desktop
-4. Application provides value even without an internet connection
-5. AI assistant provides contextually relevant and helpful responses
+2. Complex date expressions are correctly interpreted with proper temporal context
+3. Tasks synchronize reliably across devices with minimal latency
+4. UI remains responsive and functional on mobile and desktop
+5. Application provides value even without an internet connection
+6. AI assistant provides contextually relevant and helpful responses

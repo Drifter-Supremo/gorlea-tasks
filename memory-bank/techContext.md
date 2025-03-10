@@ -32,6 +32,9 @@ Gorlea Tasks uses a modern web technology stack focused on client-side functiona
 |------------|-------------|------------------|
 | OpenAI API | AI service provider | Core natural language processing capabilities |
 | GPT-4o-mini | Language model | Task parsing, suggestions, and chatbot functionality |
+| Rich Context Generation | Custom implementation | Enhanced date/time context for AI understanding |
+| Multi-layered Validation | Custom implementation | Validation of AI-parsed data with fallback mechanisms |
+| Calendar View Context | Custom technique | Providing temporal relationships to improve AI understanding |
 
 ### Progressive Web App (PWA)
 
@@ -112,6 +115,24 @@ The application supports multiple deployment options:
 - CSS variables used for theming require modern browser support
 
 ## Technical Design Decisions
+
+### AI Context Enhancement
+
+The application implements a sophisticated approach to AI contextual awareness:
+
+- **Rich Date Context Generation**:
+  - `generateDateTimeContext()` function creates comprehensive temporal information
+  - Provides multiple date formats (ISO, human-readable) for the same point in time
+  - Includes a "calendar view" of the current and next week
+  - Defines important reference dates (tomorrow, month start/end)
+  - Significantly improves AI's understanding of natural language time references
+
+- **Multi-Layered Date Validation**:
+  - Initial parsing by AI with rich context
+  - Secondary validation against system time
+  - Detection of dates suspiciously in the past or future
+  - Fallback to pattern-based parsing when needed
+  - Log-based debugging for incorrect date detections
 
 ### Credential Security Model
 

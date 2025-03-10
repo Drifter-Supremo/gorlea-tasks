@@ -52,9 +52,45 @@
             </select>
         </div>
         
-        <!-- Scrollable task container -->
-        <div class="task-list-container scrollable">
-            <div id="task-list" class="task-list"></div>
+<!-- Scrollable task container with fixed height -->
+<div class="task-list-container scrollable">
+    <div id="task-list" class="task-list"></div>
+</div>
+        
+        <!-- Date/Time Confirmation Modal -->
+        <div id="date-time-modal" class="modal">
+            <div class="modal-content">
+                <h3>Confirm Due Date & Time</h3>
+                
+                <!-- Quick Select Buttons -->
+                <div class="date-quick-select">
+                    <button class="date-option" data-option="today">Today</button>
+                    <button class="date-option" data-option="tomorrow">Tomorrow</button>
+                    <button class="date-option" data-option="next-week">Next Week</button>
+                    <button class="date-option" data-option="no-date">No Due Date</button>
+                </div>
+                
+                <!-- Calendar Date Picker -->
+                <div class="date-picker-container">
+                    <label for="date-picker">Or select a specific date:</label>
+                    <input type="date" id="date-picker">
+                </div>
+                
+                <!-- Time Selection -->
+                <div class="time-selection">
+                    <label for="time-selector">Select time (optional):</label>
+                    <select id="time-selector">
+                        <option value="">No Specific Time</option>
+                        <!-- Time options will be generated with JS -->
+                    </select>
+                </div>
+                
+                <!-- Buttons -->
+                <div class="modal-actions">
+                    <button id="confirm-task-btn" class="primary-btn">Confirm Task</button>
+                    <button id="cancel-task-btn" class="secondary-btn">Cancel</button>
+                </div>
+            </div>
         </div>
         
         <!-- Chat interface (Claude/ChatGPT style) -->

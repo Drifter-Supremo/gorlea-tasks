@@ -82,8 +82,6 @@ let darkMode = false;
 let db = null; // Firebase database reference
 let isOnline = navigator.onLine;
 let deviceId = null; // Unique identifier for this device
-let originalTaskText = ''; // Store the original task text for reference
-let currentParsedTask = null; // Store the parsed task while showing the date/time modal
 
 // Initialize the app
 function init() {
@@ -382,184 +380,6 @@ function syncTasksToCloud() {
         });
 }
 
-// Generate time options for the dropdown (15-minute increments)
-function populateTimeOptions() {
-    const timeSelector = document.getElementById('time-selector');
-    timeSelector.innerHTML = '<option value="">No Specific Time</option>';
-    
-    for (let hour = 0; hour < 24; hour++) {
-        for (let minute = 0; minute < 60; minute += 15) {
-            const hour12 = hour % 12 || 12;
-            const period = hour < 12 ? 'AM' : 'PM';
-            const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-            const displayTime = `${hour12}:${minute.toString().padStart(2, '0')} ${period}`;
-            
-            const option = document.createElement('option');
-            option.value = timeString;
-            option.textContent = displayTime;
-            
-            // Default to 9:00 AM
-            if (hour === 9 && minute === 0) {
-                option.selected = true;
-            }
-            
-            timeSelector.appendChild(option);
-        }
-    }
-}
-
-// Function to show the date/time modal
-function showDateTimeModal(parsedTask, taskText) {
-    // Store the original task text and parsed task for later use
-    originalTaskText = taskText;
-    currentParsedTask = parsedTask;
-    
-    // Populate time options
-    populateTimeOptions();
-    
-    // Reset any previously selected date options
-    document.querySelectorAll('.date-option.selected').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    
-    // Set initial date value if AI detected one
-    const datePicker = document.getElementById('date-picker');
-    if (parsedTask.dueDate) {
-        // Extract just the date part of the ISO string
-        const dateOnly = parsedTask.dueDate.split('T')[0];
-        datePicker.value = dateOnly;
-        
-        // Set the appropriate quick select button if it matches
-        const today = new Date();
-        const tomorrow = new Date();
-        tomorrow.setDate(today.getDate() + 1);
-        const nextWeek = new Date();
-        nextWeek.setDate(today.getDate() + 7);
-        
-        const todayStr = today.toISOString().split('T')[0];
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        const nextWeekStr = nextWeek.toISOString().split('T')[0];
-        
-        if (dateOnly === todayStr) {
-            document.querySelector('.date-option[data-option="today"]').classList.add('selected');
-        } else if (dateOnly === tomorrowStr) {
-            document.querySelector('.date-option[data-option="tomorrow"]').classList.add('selected');
-        } else if (dateOnly === nextWeekStr) {
-            document.querySelector('.date-option[data-option="next-week"]').classList.add('selected');
-        }
-    }
-    
-    // Set initial time value if AI detected one
-    const timeSelector = document.getElementById('time-selector');
-    if (parsedTask.dueTime) {
-        // Find the closest time option
-        const options = timeSelector.options;
-        for (let i = 0; i < options.length; i++) {
-            if (options[i].value === parsedTask.dueTime) {
-                options[i].selected = true;
-                break;
-            }
-        }
-    }
-    
-    // Show the modal
-    const modal = document.getElementById('date-time-modal');
-    modal.style.display = 'block';
-    
-    // Set up event listeners for the date option buttons
-    setupDateOptionListeners();
-}
-
-// Setup event listeners for date option buttons
-function setupDateOptionListeners() {
-    document.querySelectorAll('.date-option').forEach(button => {
-        // Remove any existing event listeners first
-        const newButton = button.cloneNode(true);
-        button.parentNode.replaceChild(newButton, button);
-        
-        newButton.addEventListener('click', () => {
-            // Clear existing selection
-            document.querySelectorAll('.date-option.selected').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            
-            // Add selected class
-            newButton.classList.add('selected');
-            
-            // Get the date picker
-            const datePicker = document.getElementById('date-picker');
-            
-            // Set date based on option
-            const option = newButton.dataset.option;
-            if (option === 'today') {
-                const today = new Date();
-                datePicker.value = today.toISOString().split('T')[0];
-            } else if (option === 'tomorrow') {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                datePicker.value = tomorrow.toISOString().split('T')[0];
-            } else if (option === 'next-week') {
-                const nextWeek = new Date();
-                nextWeek.setDate(nextWeek.getDate() + 7);
-                datePicker.value = nextWeek.toISOString().split('T')[0];
-            } else if (option === 'no-date') {
-                datePicker.value = '';
-            }
-        });
-    });
-    
-    // Set up confirm and cancel buttons
-    const confirmBtn = document.getElementById('confirm-task-btn');
-    const cancelBtn = document.getElementById('cancel-task-btn');
-    
-    // Remove any existing event listeners
-    const newConfirmBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-    
-    const newCancelBtn = cancelBtn.cloneNode(true);
-    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-    
-    // Add new event listeners
-    newConfirmBtn.addEventListener('click', confirmTaskWithSelectedDate);
-    newCancelBtn.addEventListener('click', cancelTaskCreation);
-}
-
-// Handle date/time confirmation
-function confirmTaskWithSelectedDate() {
-    // Get values from modal
-    const datePicker = document.getElementById('date-picker');
-    const timeSelector = document.getElementById('time-selector');
-    
-    // Update parsed task with user-selected date/time
-    if (datePicker.value) {
-        currentParsedTask.dueDate = datePicker.value;
-    } else {
-        currentParsedTask.dueDate = null;
-    }
-    
-    currentParsedTask.dueTime = timeSelector.value || null;
-    
-    // Hide the modal
-    document.getElementById('date-time-modal').style.display = 'none';
-    
-    // Create the task with the user-confirmed date/time
-    addParsedTask(currentParsedTask, originalTaskText);
-    
-    // Clear the input
-    taskInput.value = '';
-}
-
-// Handle cancellation
-function cancelTaskCreation() {
-    // Hide the modal
-    document.getElementById('date-time-modal').style.display = 'none';
-    
-    // Clear the input processing indicator
-    inputProcessing.textContent = '';
-    
-    // Don't clear the task input in case the user wants to modify it
-}
-
 // Handle adding a task
 async function handleAddTask() {
     const taskText = taskInput.value.trim();
@@ -585,7 +405,7 @@ async function handleAddTask() {
         const analysisTimeoutId = setTimeout(() => {
             console.warn('Task analysis timed out, proceeding with fallback task');
             inputProcessing.textContent = ''; // Clear the processing indicator
-            showDateTimeModal(fallbackTask, taskText);
+            addParsedTask(fallbackTask, taskText);
         }, 8000); // 8 seconds timeout
         
         try {
@@ -602,11 +422,12 @@ async function handleAddTask() {
                 parsedTask.dueDate = fallbackTask.dueDate;
             }
             
-            // Clear the processing indicator immediately
+            // Clear the input and processing indicator immediately
+            taskInput.value = '';
             inputProcessing.textContent = '';
             
-            // Show the date/time confirmation modal
-            showDateTimeModal(parsedTask, taskText);
+            // Create the task object and add it
+            addParsedTask(parsedTask, taskText);
         } catch (error) {
             clearTimeout(analysisTimeoutId); // Clear the timeout
             console.error('Error with AI parsing:', error);
@@ -614,8 +435,8 @@ async function handleAddTask() {
             // Clear the processing indicator
             inputProcessing.textContent = '';
             
-            // Show the date/time confirmation modal with fallback results
-            showDateTimeModal(fallbackTask, taskText);
+            // Add using the fallback parser results
+            addParsedTask(fallbackTask, taskText);
         }
     } else {
         // Regular task flow
@@ -627,7 +448,7 @@ async function handleAddTask() {
             // Use fallback parser instead of completely basic task
             const fallbackTask = createFallbackTaskObject(taskText);
             console.log('Fallback parser result after timeout:', fallbackTask);
-            showDateTimeModal(fallbackTask, taskText);
+            addParsedTask(fallbackTask, taskText);
         }, 12000); // 12 seconds timeout for regular tasks
         
         try {
@@ -646,11 +467,12 @@ async function handleAddTask() {
                 parsedTask.dueDate = fallbackTask.dueDate;
             }
             
-            // Clear the processing indicator immediately
+            // Clear the input and processing indicator immediately
+            taskInput.value = '';
             inputProcessing.textContent = '';
             
-            // Show the date/time confirmation modal
-            showDateTimeModal(parsedTask, taskText);
+            // Create the task object and add it
+            addParsedTask(parsedTask, taskText);
         } catch (error) {
             clearTimeout(analysisTimeoutId); // Clear the timeout
             console.error('Error adding task:', error);
@@ -658,10 +480,10 @@ async function handleAddTask() {
             // Clear the processing indicator
             inputProcessing.textContent = '';
             
-            // Use fallback parser and show the date/time confirmation modal
+            // Use fallback parser instead of completely basic task
             const fallbackTask = createFallbackTaskObject(taskText);
             console.log('Fallback parser result after error:', fallbackTask);
-            showDateTimeModal(fallbackTask, taskText);
+            addParsedTask(fallbackTask, taskText);
         }
     }
 }
@@ -686,18 +508,9 @@ function addParsedTask(parsedTask, originalText) {
     // If we have both date and time, add time to the description for now
     // (since we're not updating the UI to show time yet)
     if (newTask.dueDate && newTask.dueTime && !newTask.description) {
-        // Create a proper date object for consistent formatting
-        const dueDate = new Date(newTask.dueDate);
-        const month = dueDate.toLocaleString('en-US', { month: 'long' });
-        const day = dueDate.getDate();
-        const daySuffix = getDaySuffix(day);
-        
-        newTask.description = `Due at ${formatTime(newTask.dueTime)}. ${month} ${day}${daySuffix} at ${formatTime(newTask.dueTime)}`;
+        newTask.description = `Due at ${formatTime(newTask.dueTime)}`;
     } else if (newTask.dueDate && newTask.dueTime) {
-        // Only add time information if description doesn't already have it
-        if (!newTask.description.includes('Due at')) {
-            newTask.description = `Due at ${formatTime(newTask.dueTime)}. ${newTask.description}`;
-        }
+        newTask.description = `Due at ${formatTime(newTask.dueTime)}. ${newTask.description}`;
     }
 
     if (!isOnline || !db) {
@@ -960,34 +773,29 @@ function renderTaskItem(task) {
         low: '<i class="fas fa-arrow-down-circle"></i> Low'
     };
     
-// Build the task content
-let taskContent = `
-    <div class="task-content">
-        <div class="task-title">
-            ${task.title}
-            <button class="expand-collapse-btn" title="Expand/Collapse">
-                <i class="fas fa-chevron-down"></i>
-            </button>
-        </div>
-        ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
-        <div class="task-details">
-            ${task.dueDate ? `
+    // Build the task content
+    let taskContent = `
+        <div class="task-content">
+            <div class="task-title">${task.title}</div>
+            ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+            <div class="task-details">
+                ${task.dueDate ? `
+                    <span class="task-detail">
+                        <i class="far fa-calendar-alt"></i> 
+                        ${formatDate(task.dueDate)}
+                        ${task.dueTime ? ` at ${formatTime(task.dueTime)}` : ''}
+                    </span>
+                ` : ''}
                 <span class="task-detail">
-                    <i class="far fa-calendar-alt"></i> 
-                    ${formatDate(task.dueDate)}
-                    ${task.dueTime ? ` at ${formatTime(task.dueTime)}` : ''}
+                    ${priorityText[task.priority] || priorityText.medium}
                 </span>
-            ` : ''}
-            <span class="task-detail">
-                ${priorityText[task.priority] || priorityText.medium}
-            </span>
-            ${task.category ? `
-                <span class="task-detail">
-                    <i class="fas fa-tag"></i> 
-                    ${task.category}
-                </span>
-            ` : ''}
-        </div>
+                ${task.category ? `
+                    <span class="task-detail">
+                        <i class="fas fa-tag"></i> 
+                        ${task.category}
+                    </span>
+                ` : ''}
+            </div>
     `;
     
     // Add notes if they exist
@@ -1024,22 +832,10 @@ let taskContent = `
     const completeBtn = taskElement.querySelector('.complete-btn');
     const editBtn = taskElement.querySelector('.edit-btn');
     const deleteBtn = taskElement.querySelector('.delete-btn');
-    const expandCollapseBtn = taskElement.querySelector('.expand-collapse-btn');
     
     completeBtn.addEventListener('click', () => completeTask(task.id));
     editBtn.addEventListener('click', () => editTask(task.id));
     deleteBtn.addEventListener('click', () => deleteTask(task.id));
-    
-    // Add expand/collapse functionality
-    if (expandCollapseBtn) {
-        expandCollapseBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            taskElement.classList.toggle('collapsed');
-        });
-    }
-    
-    // Start with tasks collapsed by default
-    taskElement.classList.add('collapsed');
     
     return taskElement;
 }
@@ -1260,89 +1056,6 @@ function offerToAddTask(message) {
 }
 
 // AI Integration Functions
-// Generate a rich date-time context with detailed date information
-function generateDateTimeContext() {
-    const now = new Date();
-    const currentDay = now.getDay();
-    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    
-    // Current date in multiple formats
-    const context = {
-        currentDateTime: {
-            iso: now.toISOString(),
-            readable: now.toLocaleString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: 'numeric',
-                minute: 'numeric',
-                timeZoneName: 'short'
-            }),
-            date: now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-            time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', timeZoneName: 'short' }),
-            unixTimestamp: Math.floor(now.getTime() / 1000)
-        },
-        currentWeek: [],
-        nextWeek: [],
-        upcomingDates: {}
-    };
-    
-    // Generate current week dates
-    for (let i = 0; i < 7; i++) {
-        const date = new Date(now);
-        const dayIndex = (currentDay + i) % 7; // Start from current day and wrap around to the week
-        date.setDate(date.getDate() + i); // Add days starting from today
-        
-        context.currentWeek.push({
-            weekday: weekdays[dayIndex],
-            date: date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-            iso: date.toISOString().split('T')[0],
-            isToday: i === 0
-        });
-    }
-    
-    // Generate next week dates
-    for (let i = 0; i < 7; i++) {
-        const date = new Date(now);
-        const dayIndex = (currentDay + i) % 7; // Same day pattern as current week
-        date.setDate(date.getDate() + i + 7); // Add 7 days to get to next week
-        
-        context.nextWeek.push({
-            weekday: weekdays[dayIndex],
-            date: date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-            iso: date.toISOString().split('T')[0]
-        });
-    }
-    
-    // Add special reference dates
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    const nextMonth = new Date(now);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-    nextMonth.setDate(1);
-    
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    
-    context.upcomingDates = {
-        tomorrow: {
-            iso: tomorrow.toISOString().split('T')[0],
-            readable: tomorrow.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-        },
-        nextMonthStart: {
-            iso: nextMonth.toISOString().split('T')[0],
-            readable: nextMonth.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-        },
-        endOfMonth: {
-            iso: endOfMonth.toISOString().split('T')[0],
-            readable: endOfMonth.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-        }
-    };
-    
-    return context;
-}
-
 async function parseTaskWithAI(taskText) {
     try {
         // Check if API key is set
@@ -1361,27 +1074,16 @@ async function parseTaskWithAI(taskText) {
         // Create the API request promise
         const apiPromise = new Promise(async (resolve, reject) => {
             try {
-                // Get rich date-time context
-                const dateContext = generateDateTimeContext();
-                
-                // Format current week as a readable string
-                const currentWeekFormatted = dateContext.currentWeek
-                    .map(day => `${day.weekday} is ${day.date}${day.isToday ? ' (Today)' : ''}`)
-                    .join('\n      ');
-                
-                // Format next week as a readable string
-                const nextWeekFormatted = dateContext.nextWeek
-                    .map(day => `${day.weekday} is ${day.date}`)
-                    .join('\n      ');
-                
-                // Basic date references for compatibility with existing code
+                // Get the current date for context
                 const today = new Date();
                 const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setDate(today.getDate() + 1);
+                
+                // Format dates for the AI
                 const todayFormatted = today.toISOString().split('T')[0]; // YYYY-MM-DD
                 const tomorrowFormatted = tomorrow.toISOString().split('T')[0]; // YYYY-MM-DD
                 
-                console.log(`Enhanced date context for AI: Today is ${dateContext.currentDateTime.readable}`);
+                console.log(`Current date context for AI: Today is ${todayFormatted}, Tomorrow is ${tomorrowFormatted}`);
                 
                 // Call OpenAI API directly
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -1395,70 +1097,54 @@ async function parseTaskWithAI(taskText) {
                         messages: [
                             {
                                 role: "system",
-                                content: `You are an AI assistant helping to parse natural language task inputs.
-
-Today's complete date and time information:
-- Current date and time: ${dateContext.currentDateTime.readable}
-- Today is ${dateContext.currentDateTime.date}
-- Current time is ${dateContext.currentDateTime.time}
-- ISO format: ${dateContext.currentDateTime.iso}
-
-This week's dates:
-      ${currentWeekFormatted}
-      
-Next week's dates:
-      ${nextWeekFormatted}
-      
-Other reference dates:
-- Tomorrow is ${dateContext.upcomingDates.tomorrow.readable}
-- Start of next month is ${dateContext.upcomingDates.nextMonthStart.readable}
-- End of this month is ${dateContext.upcomingDates.endOfMonth.readable}
-
-Extract the following information from the task:
-
-1. Task title - Create a concise, professional, action-oriented title (5-7 words max). 
-   - Focus ONLY on the core action/task
-   - REMOVE ALL time/date information, priority indicators, and unnecessary words
-   - Start with a verb when possible
-   - Example: "super important one on one with my manager on monday at 9am" → "One on One with Manager"
-   - Example: "need to buy milk from the store tomorrow morning" → "Buy Milk from Store"
-
-2. Description - Include ALL additional details that were removed from the title, including:
-   - Priority indicators ("important", "urgent", etc.)
-   - Context information
-   - Any other details not included in the title
-
-3. Due date - Extract in ISO format YYYY-MM-DD, if mentioned.
-   - IMPORTANT: Today is ${todayFormatted}
-   - IMPORTANT: Tomorrow is ${tomorrowFormatted}
-   - If "tomorrow" is mentioned, use ${tomorrowFormatted}
-   - Use the current year (${today.getFullYear()}) for any dates without a year
-   - Make sure all dates are in the future relative to today
-
-4. Due time - Extract time in 24-hour format (HH:MM), if mentioned. Convert time expressions:
-   - "morning" → "09:00"
-   - "afternoon" → "14:00"
-   - "evening" → "19:00"
-   - "night" → "21:00"
-   - "noon" → "12:00"
-   - "midnight" → "00:00"
-
-5. Priority - Set as "high", "medium", or "low". Look for indicators:
-   - High priority: "urgent", "important", "super important", "very important", "critical", "asap", "top priority", "highest priority", "crucial", "vital", "essential"
-   - Low priority: "low priority", "whenever", "not urgent", "someday", "when you have time", "no rush", "not important", "can wait"
-   - Default to "medium" if no priority indicators are found
-
-6. Category - Identify as work, personal, shopping, health, etc.
-
-Respond in JSON format with these fields. For example:
-{
-  "title": "One on One with Manager",
-  "description": "Important meeting to discuss project updates",
-  "dueDate": "2025-03-03",
-  "dueTime": "09:00",
-  "priority": "high",
-  "category": "work"
-}`
+                                content: `You are an AI assistant helping to parse natural language task inputs. 
+                                Today's date is ${todayFormatted} (YYYY-MM-DD format).
+                                
+                                Extract the following information from the task:
+                                
+                                1. Task title - Create a concise, professional, action-oriented title (5-7 words max). 
+                                   - Focus ONLY on the core action/task
+                                   - REMOVE ALL time/date information, priority indicators, and unnecessary words
+                                   - Start with a verb when possible
+                                   - Example: "super important one on one with my manager on monday at 9am" → "One on One with Manager"
+                                   - Example: "need to buy milk from the store tomorrow morning" → "Buy Milk from Store"
+                                
+                                2. Description - Include ALL additional details that were removed from the title, including:
+                                   - Priority indicators ("important", "urgent", etc.)
+                                   - Context information
+                                   - Any other details not included in the title
+                                
+                                3. Due date - Extract in ISO format YYYY-MM-DD, if mentioned.
+                                   - IMPORTANT: Today is ${todayFormatted}
+                                   - IMPORTANT: Tomorrow is ${tomorrowFormatted}
+                                   - If "tomorrow" is mentioned, use ${tomorrowFormatted}
+                                   - Use the current year (${today.getFullYear()}) for any dates without a year
+                                   - Make sure all dates are in the future relative to today
+                                
+                                4. Due time - Extract time in 24-hour format (HH:MM), if mentioned. Convert time expressions:
+                                   - "morning" → "09:00"
+                                   - "afternoon" → "14:00"
+                                   - "evening" → "19:00"
+                                   - "night" → "21:00"
+                                   - "noon" → "12:00"
+                                   - "midnight" → "00:00"
+                                
+                                5. Priority - Set as "high", "medium", or "low". Look for indicators:
+                                   - High priority: "urgent", "important", "super important", "very important", "critical", "asap", "top priority", "highest priority", "crucial", "vital", "essential"
+                                   - Low priority: "low priority", "whenever", "not urgent", "someday", "when you have time", "no rush", "not important", "can wait"
+                                   - Default to "medium" if no priority indicators are found
+                                
+                                6. Category - Identify as work, personal, shopping, health, etc.
+                                
+                                Respond in JSON format with these fields. For example:
+                                {
+                                  "title": "One on One with Manager",
+                                  "description": "Important meeting to discuss project updates",
+                                  "dueDate": "2025-03-03",
+                                  "dueTime": "09:00",
+                                  "priority": "high",
+                                  "category": "work"
+                                }`
                             },
                             {
                                 role: "user",
@@ -1765,683 +1451,484 @@ function createFallbackTaskObject(taskText) {
         }
         // Simple day name detection (like "Friday")
         else {
-            for (const dayName of Object.keys(dayMap)) {
-                if (taskText.toLowerCase().includes(dayName)) {
-                    const targetDay = dayMap[dayName];
-                    const currentDay = today.getDay();
-                    
-                    // Calculate days to add
-                    let daysToAdd;
-                    if (targetDay > currentDay) {
-                        // Later this week
-                        daysToAdd = targetDay - currentDay;
-                    } else if (targetDay < currentDay) {
-                        // Next week
-                        daysToAdd = 7 + (targetDay - currentDay);
-                    } else {
-                        // Same day, use next week
-                        daysToAdd = 7;
-                    }
-                    
-                    const targetDate = new Date(today);
-                    targetDate.setDate(today.getDate() + daysToAdd);
-                    dueDate = targetDate.toISOString().split('T')[0];
-                    console.log(`Detected "${dayName}", adding ${daysToAdd} days, setting due date to ${dueDate}`);
-                    break;
-                }
-            }
-        }
-    }
-    
-    // Month name with day - like "March 15th"
-    const monthNameDayPattern = /(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?/i;
-    const monthNameDayMatch = taskText.match(monthNameDayPattern);
+            for (const dayName of Object.keys
+/*
+* Agenda - A Smart To-Do List
+* 
+* Setup Instructions:
+* 1. Open the index.html file in a web browser
+* 2. When prompted, enter your OpenAI API key to enable AI features
+*    (Your API key is stored securely in your browser's localStorage)
+* 3. Start adding tasks using natural language
+* 4. Use the chat assistant for help or questions
+* 
+* Features:
+* - Natural language task input with smart parsing
+* - Task management (add, edit, delete, complete)
+* - Smart prioritization and suggestions
+* - Timeline view with grouping by date
+* - Search and filtering capabilities
+* - Chat assistant for task-related queries
+* - Dark mode support
+* - Google Cloud storage (tasks persist across refreshes and devices)
+* 
+* Tasks are saved to Google Cloud storage for persistence
+* This app requires an internet connection for full functionality
+*/
 
-    if (monthNameDayMatch) {
-        const monthMap = {
-            'january': 0, 'february': 1, 'march': 2, 'april': 3, 'may': 4, 'june': 5,
-            'july': 6, 'august': 7, 'september': 8, 'october': 9, 'november': 10, 'december': 11
-        };
-        
-        const monthName = monthNameDayMatch[1].toLowerCase();
-        const month = monthMap[monthName];
-        const day = parseInt(monthNameDayMatch[2], 10);
-        
-        // Determine year (current year, unless the date has already passed)
-        let year = today.getFullYear();
-        const dateWithCurrentYear = new Date(year, month, day);
-        
-        // If the date has already passed this year, use next year
-        if (dateWithCurrentYear < today) {
-            year++;
-        }
-        
-        const specificDate = new Date(year, month, day);
-        dueDate = specificDate.toISOString().split('T')[0];
-        console.log(`Detected month name with day pattern "${monthNameDayMatch[0]}", setting due date to ${dueDate}`);
-    }
+// Configuration
+// OpenAI API key (will be stored in localStorage)
+let OPENAI_API_KEY = localStorage.getItem('openai-api-key') || '';
+const OPENAI_MODEL = 'gpt-4o-mini';
 
-    // Enhanced day name with month and day - like "Thursday March 13th"
-    const dayMonthPattern = /(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:st|nd|rd|th)?/i;
-    const dayMonthMatch = taskText.match(dayMonthPattern);
-
-    if (dayMonthMatch) {
-        const monthMap = {
-            'january': 0, 'february': 1, 'march': 2, 'april': 3, 'may': 4, 'june': 5,
-            'july': 6, 'august': 7, 'september': 8, 'october': 9, 'november': 10, 'december': 11
-        };
-        
-        const monthName = dayMonthMatch[2].toLowerCase();
-        const month = monthMap[monthName];
-        const day = parseInt(dayMonthMatch[3], 10);
-        
-        // Always use current year for day+month format
-        const year = today.getFullYear();
-        const specificDate = new Date(year, month, day);
-        
-        // Verify the date is valid and not in the past
-        if (!isNaN(specificDate.getTime())) {
-            // If date is in the past, assume next year
-            if (specificDate < today) {
-                specificDate.setFullYear(year + 1);
-            }
-            
-            dueDate = specificDate.toISOString().split('T')[0];
-            console.log(`Detected day with month pattern "${dayMonthMatch[0]}", setting due date to ${dueDate}`);
-        }
-    }
-    
-    // If still no due date, check for other date patterns
-    if (!dueDate) {
-        // Handle "today", "tonight", "this morning/afternoon/evening"
-        if (/\b(today|tonight|this morning|this afternoon|this evening)\b/i.test(taskText)) {
-            dueDate = today.toISOString().split('T')[0];
-            console.log(`Detected "today", setting due date to ${dueDate}`);
-        } 
-        // Handle "next week"
-        else if (/\b(next week)\b/i.test(taskText)) {
-            const nextWeek = new Date(today);
-            nextWeek.setDate(today.getDate() + 7);
-            dueDate = nextWeek.toISOString().split('T')[0];
-            console.log(`Detected "next week", setting due date to ${dueDate}`);
-        }
-        // Handle month name patterns
-        else {
-            const monthPattern = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* (\d{1,2})(?:st|nd|rd|th)?/i;
-            const monthMatch = taskText.match(monthPattern);
-            
-            if (monthMatch) {
-                const monthMap = {
-                    'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
-                    'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
-                };
-                
-                const month = monthMap[monthMatch[1].toLowerCase().substring(0, 3)];
-                const day = parseInt(monthMatch[2], 10);
-                
-                // Determine year (current year, unless the date has already passed)
-                let year = today.getFullYear();
-                const dateWithCurrentYear = new Date(year, month, day);
-                
-                // If the date has already passed this year, use next year
-                if (dateWithCurrentYear < today) {
-                    year++;
-                }
-                
-                const specificDate = new Date(year, month, day);
-                dueDate = specificDate.toISOString().split('T')[0];
-                console.log(`Detected month name pattern "${monthMatch[0]}", setting due date to ${dueDate}`);
-            }
-        }
-    }
-    
-    // Check for due in pattern (e.g., "due in 3 days")
-    if (!dueDate) {
-        const dueInRegex = /due in (\d+) (day|days|week|weeks|month|months)/i;
-        const dueInMatch = taskText.match(dueInRegex);
-        
-        if (dueInMatch) {
-            const amount = parseInt(dueInMatch[1], 10);
-            const unit = dueInMatch[2].toLowerCase();
-            
-            const dueInDate = new Date(today);
-            if (unit === 'day' || unit === 'days') {
-                dueInDate.setDate(today.getDate() + amount);
-            } else if (unit === 'week' || unit === 'weeks') {
-                dueInDate.setDate(today.getDate() + (amount * 7));
-            } else if (unit === 'month' || unit === 'months') {
-                dueInDate.setMonth(today.getMonth() + amount);
-            }
-            
-            dueDate = dueInDate.toISOString().split('T')[0];
-            console.log(`Detected "due in ${amount} ${unit}", setting due date to ${dueDate}`);
-        }
-    }
-    
-    console.log('Fallback parsing result:', { title, description, dueDate, dueTime, priority, category, notes: '' });
-    return {
-        title,
-        description,
-        dueDate,
-        dueTime,
-        priority,
-        category,
-        notes: '' // Add notes field
-    };
+// Function to set the OpenAI API key
+function setOpenAIApiKey(key) {
+    OPENAI_API_KEY = key;
+    localStorage.setItem('openai-api-key', key);
+    console.log('OpenAI API key set successfully');
 }
 
-async function generateFollowUpWithAI(task) {
+// Check if API key is set
+function isApiKeySet() {
+    return OPENAI_API_KEY && OPENAI_API_KEY.trim() !== '';
+}
+
+// Prompt user for API key if not set
+function promptForApiKey() {
+    const key = prompt('Please enter your OpenAI API key to enable AI features:');
+    if (key && key.trim() !== '') {
+        setOpenAIApiKey(key);
+        return true;
+    }
+    return false;
+}
+
+// Google Cloud Firebase configuration
+const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDhonKe0iUgUwlFQDUhvRdJm4ghdYCN3uw",
+    authDomain: "gorlea-tasks.firebaseapp.com",
+    databaseURL: "https://gorlea-tasks-default-rtdb.firebaseio.com/",
+    projectId: "gorlea-tasks",
+    storageBucket: "gorlea-tasks.firebasestorage.app",
+    messagingSenderId: "940617852039",
+    appId: "1:940617852039:web:d929689611bb0c2df10422"
+  };
+
+  // Firebase will be initialized in initializeFirebase()
+
+// DOM Elements
+const taskInput = document.getElementById('task-input');
+const addTaskBtn = document.getElementById('add-task-btn');
+const taskList = document.getElementById('task-list');
+const searchInput = document.getElementById('search-input');
+const filterDropdown = document.getElementById('filter-dropdown');
+const chatInput = document.getElementById('chat-input');
+const chatSendBtn = document.getElementById('chat-send-btn');
+const chatMessages = document.getElementById('chat-messages');
+const inputProcessing = document.getElementById('input-processing');
+const taskFeedback = document.getElementById('task-feedback');
+
+// State variables
+let tasks = [];
+let currentFilter = 'all';
+let editingTaskId = null;
+let darkMode = false;
+let db = null; // Firebase database reference
+let isOnline = navigator.onLine;
+let deviceId = null; // Unique identifier for this device
+
+// Initialize the app
+function init() {
+    console.log('Initializing app...');
+    initializeFirebase();
+    loadThemePreference();
+    addEventListeners();
+    setupOnlineListener();
+    
+    // Show app is ready
+    console.log('App initialized successfully');
+}
+
+// Listen for online/offline status changes
+function setupOnlineListener() {
+    window.addEventListener('online', () => {
+        console.log('Device is now online');
+        isOnline = true;
+        showFeedback("You're back online. Your tasks will now sync.", "success");
+        // Reload tasks from firebase when we come back online
+        loadTasksFromFirebase();
+    });
+    
+    window.addEventListener('offline', () => {
+        console.log('Device is now offline');
+        isOnline = false;
+        showFeedback("You're offline. Please reconnect to save your changes.", "warning");
+    });
+}
+
+// Get or create a unique device ID
+function getDeviceId() {
     try {
-        // Check if API key is set
-        if (!isApiKeySet()) {
-            if (!promptForApiKey()) {
-                console.warn('No OpenAI API key provided, using fallback follow-up suggestion');
-                return getFallbackFollowUpSuggestion(task);
-            }
+        let id = localStorage.getItem('agenda-device-id');
+        if (!id) {
+            id = 'device-' + Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('agenda-device-id', id);
         }
-        
-        // Create a timeout for the suggestion
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Follow-up suggestion timed out')), 8000)
-        );
-        
-        // Create the API request promise
-        const apiPromise = new Promise(async (resolve, reject) => {
-            try {
-                // Call OpenAI API directly
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${OPENAI_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        model: OPENAI_MODEL,
-                        messages: [
-                            {
-                                role: "system",
-                                content: `You are an AI assistant helping with task management. 
-                                A user has just completed the following task:
-                                
-                                Title: ${task.title}
-                                Description: ${task.description || 'None'}
-                                Category: ${task.category || 'general'}
-                                
-                                Suggest a single, specific follow-up action that would be logical to do next. 
-                                Keep it brief (under 15 words) and actionable. Don't use phrases like "you could" or "I suggest" - just state the follow-up task directly.`
-                            }
-                        ],
-                        temperature: 0.7
-                    })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText || 'Unknown error'}`);
-                }
-                
-                const data = await response.json();
-                const suggestion = data.choices[0].message.content.trim();
-                resolve(suggestion);
-            } catch (error) {
-                console.error('Error calling OpenAI API:', error);
-                reject(error);
-            }
-        });
-        
-        // Race the API call against the timeout
-        return await Promise.race([apiPromise, timeoutPromise]);
+        return id;
     } catch (error) {
-        console.warn('Error generating follow-up suggestion, returning fallback:', error);
-        return getFallbackFollowUpSuggestion(task);
+        return 'device-' + Math.random().toString(36).substring(2, 15);
     }
 }
 
-// Helper function to get fallback follow-up suggestion
-function getFallbackFollowUpSuggestion(task) {
-    // Return a generic follow-up based on task category
-    if (task.category === 'work') {
-        return "Update team on progress";
-    } else if (task.category === 'meeting') {
-        return "Send meeting notes to participants";
-    } else if (task.category === 'email' || task.title.toLowerCase().includes('email')) {
-        return "Follow up if no response within 2 days";
-    } else if (task.category === 'shopping') {
-        return "Check if you need anything else from the store";
-    } else if (task.category === 'health') {
-        return "Schedule your next appointment";
-    } else if (task.title.toLowerCase().includes('call') || task.title.toLowerCase().includes('phone')) {
-        return "Send a follow-up message with call summary";
-    } else {
-        return "Review what you've accomplished today";
-    }
-}
-
-async function getAIChatResponse(userMessage) {
+// Initialize Firebase with minimal configuration
+function initializeFirebase() {
     try {
-        // Check if API key is set
-        if (!isApiKeySet()) {
-            if (!promptForApiKey()) {
-                console.warn('No OpenAI API key provided, using fallback chat response');
-                return getFallbackChatResponse(userMessage);
-            }
-        }
-        
-        // Create a timeout promise that rejects after 10 seconds
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Chat response timed out')), 10000)
-        );
-        
-        // Create the API request promise
-        const apiPromise = new Promise(async (resolve, reject) => {
-            try {
-                // Create a context with the user's tasks
-                const taskContext = tasks && tasks.length > 0 
-                    ? `Here are the user's current tasks:\n${tasks.map(t => 
-                        `- ${t.title} (${t.completed ? 'Completed' : 'Active'}, Priority: ${t.priority}${t.dueDate ? `, Due: ${t.dueDate}` : ''})`
-                    ).join('\n')}`
-                    : 'The user has no tasks yet.';
-                
-                // Call OpenAI API directly
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${OPENAI_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        model: OPENAI_MODEL,
-                        messages: [
-                            {
-                                role: "system",
-                                content: `You are Gorlea, a versatile AI assistant in a to-do list app. While task management is one of your capabilities, you are a fully-featured assistant that can help with any request the user has.
-                                
-                                ${taskContext}
-                                
-                                Keep your responses friendly, helpful, and concise (under 3 sentences when possible). If the user is asking about their tasks, provide specific information based on the task context provided.
-                                
-                                You can help with ANY request, including but not limited to:
-                                - Task management (adding, editing, completing tasks)
-                                - Creating shopping lists, recipes, meal plans, workout routines
-                                - Drafting emails, messages, or other content
-                                - Providing recommendations for products, movies, books, etc.
-                                - Answering general knowledge questions on any topic
-                                - Brainstorming ideas for projects, gifts, activities
-                                - Solving problems, explaining concepts, or teaching skills
-                                - Providing information about current events, sports, entertainment
-                                - Assisting with planning trips, events, or activities
-                                - Any other helpful assistance the user requests
-                                
-                                IMPORTANT: You are NOT limited to task management. You should respond helpfully to ANY request the user makes, whether it's related to tasks or not. If asked for a recipe, provide it. If asked for recommendations, give them. If asked to create a shopping list, do so.`
-                            },
-                            {
-                                role: "user",
-                                content: userMessage
-                            }
-                        ],
-                        temperature: 0.7
-                    })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText || 'Unknown error'}`);
-                }
-                
-                const data = await response.json();
-                const aiResponse = data.choices[0].message.content.trim();
-                resolve(aiResponse);
-            } catch (error) {
-                console.error('Error calling OpenAI API:', error);
-                reject(error);
-            }
-        });
-        
-        // Race the API call against the timeout
-        return await Promise.race([apiPromise, timeoutPromise]);
-    } catch (error) {
-        console.warn('Error getting AI chat response, returning fallback:', error);
-        return getFallbackChatResponse(userMessage);
-    }
-}
-
-// Helper function to get fallback chat response
-function getFallbackChatResponse(userMessage) {
-    // Provide a fallback response based on the message content
-    const lowerMessage = userMessage.toLowerCase();
-    
-    if (lowerMessage.includes('help') || lowerMessage.includes('how') || lowerMessage.includes('features')) {
-        return "I can help with task management, answer questions, provide recommendations, create content like shopping lists or recipes, and much more. What would you like assistance with today?";
-    } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
-        return "Hello! I'm Gorlea. I can help with tasks, answer questions, or assist with anything else you need. How can I help you today?";
-    } else if (lowerMessage.includes('thank')) {
-        return "You're welcome! Let me know if you need anything else.";
-    } else if (lowerMessage.includes('task') || lowerMessage.includes('todo') || lowerMessage.includes('remind')) {
-        return "Would you like to add that as a task? Use the 'Add as Task' button below or enter it in the task input field at the top.";
-    } else if (lowerMessage.includes('recipe') || lowerMessage.includes('cook') || lowerMessage.includes('food') || lowerMessage.includes('meal')) {
-        return "I'd be happy to suggest recipes or help with meal planning. When I'm back online, I can provide detailed recipes with ingredients and instructions.";
-    } else if (lowerMessage.includes('list') || lowerMessage.includes('shopping')) {
-        return "I can help create shopping lists and organize items by category. When I'm back online, I can provide more detailed assistance.";
-    } else if (lowerMessage.includes('recommend') || lowerMessage.includes('suggestion')) {
-        return "I'd be happy to provide recommendations. When I'm back online, I can give you personalized suggestions based on your preferences.";
-    } else {
-        return "I'm currently operating offline. I can still help with basic functions, and when I'm back online, I'll be able to assist with any request you have.";
-    }
-}
-
-async function callOpenAI(messages, model = OPENAI_MODEL, temperature = 0.7) {
-    try {
-        // Check if API key is set
-        if (!isApiKeySet()) {
-            if (!promptForApiKey()) {
-                console.warn('No OpenAI API key provided');
-                throw new Error('OpenAI API key is required');
-            }
-        }
-        
-        // Create a timeout promise that rejects after 10 seconds
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('API call timed out')), 10000)
-        );
-        
-        // Create the fetch promise
-        const fetchPromise = fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: model,
-                messages: messages,
-                temperature: temperature
-            })
-        });
-        
-        // Race the fetch against the timeout
-        const response = await Promise.race([fetchPromise, timeoutPromise]);
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`OpenAI API error: ${errorData.error?.message || response.statusText || 'Unknown error'}`);
-        }
-
-        const data = await response.json();
-        return data.choices[0].message.content.trim();
-    } catch (error) {
-        console.error('API call failed:', error);
-        throw error;
-    }
-}
-
-// Utility Functions
-
-// Helper function to get day suffix (st, nd, rd, th)
-function getDaySuffix(day) {
-    if (day > 3 && day < 21) return 'th';
-    switch (day % 10) {
-        case 1:  return 'st';
-        case 2:  return 'nd';
-        case 3:  return 'rd';
-        default: return 'th';
-    }
-}
-
-// Format time for display (convert 24-hour format to 12-hour format)
-function formatTime(timeString) {
-    if (!timeString) return '';
-    
-    try {
-        const [hourStr, minuteStr] = timeString.split(':');
-        const hour = parseInt(hourStr, 10);
-        const minute = parseInt(minuteStr, 10);
-        
-        if (isNaN(hour) || isNaN(minute)) {
-            return timeString;
-        }
-        
-        const period = hour >= 12 ? 'PM' : 'AM';
-        const hour12 = hour % 12 || 12; // Convert 0 to 12 for 12 AM
-        
-        return `${hour12}:${minute.toString().padStart(2, '0')} ${period}`;
-    } catch (error) {
-        console.error("Error formatting time:", error);
-        return timeString; // Return the original string if there's an error
-    }
-}
-
-// Format the date for display
-function formatDate(dateString) {
-    if (!dateString) return '';
-    
-    try {
-        // IMPORTANT: Treat the stored date as the source of truth
-        // Create a date object without timezone shifts for comparison only
-        const dateOnly = dateString.split('T')[0]; // Extract YYYY-MM-DD part
-        const dateParts = dateOnly.split('-').map(part => parseInt(part, 10));
-        
-        // For comparison purposes only - not for display (avoids timezone shifts)
-        const dateForComparison = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-        
-        // Get today, tomorrow, and day after tomorrow for comparison
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        const dayAfterTomorrow = new Date(today);
-        dayAfterTomorrow.setDate(today.getDate() + 2);
-        
-        // Compare only the date parts for special labels
-        const isToday = 
-            dateForComparison.getFullYear() === today.getFullYear() &&
-            dateForComparison.getMonth() === today.getMonth() &&
-            dateForComparison.getDate() === today.getDate();
-        
-        const isTomorrow = 
-            dateForComparison.getFullYear() === tomorrow.getFullYear() &&
-            dateForComparison.getMonth() === tomorrow.getMonth() &&
-            dateForComparison.getDate() === tomorrow.getDate();
-        
-        const isDayAfterTomorrow = 
-            dateForComparison.getFullYear() === dayAfterTomorrow.getFullYear() &&
-            dateForComparison.getMonth() === dayAfterTomorrow.getMonth() &&
-            dateForComparison.getDate() === dayAfterTomorrow.getDate();
-        
-        // Check if it's today, tomorrow, or this week - use fixed labels
-        if (isToday) {
-            return 'Today';
-        } else if (isTomorrow) {
-            return 'Tomorrow';
-        } else if (isDayAfterTomorrow) {
-            // Get day name for day after tomorrow
-            return dayAfterTomorrow.toLocaleDateString(undefined, { weekday: 'long' });
+        console.log('Initializing Firebase...');
+        // Check if Firebase is available
+        if (typeof firebase !== 'undefined') {
+            // Initialize Firebase
+            firebase.initializeApp(FIREBASE_CONFIG);
+            db = firebase.database();
+            deviceId = getDeviceId();
+            console.log('Firebase initialized with device ID:', deviceId);
+            
+            // Set up connection monitoring with shorter timeout
+            setupFirebaseConnectionMonitoring();
+            
+            // Load tasks from Firebase
+            loadTasksFromFirebase();
         } else {
-            // IMPORTANT: Use a new date object created from the parts to ensure
-            // toLocaleDateString() formats exactly the date that was stored
-            const displayDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-            
-            // Format as Month Day, Year with weekday
-            return displayDate.toLocaleDateString(undefined, { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric',
-                weekday: 'long' 
-            });
+            console.warn('Firebase library not available');
+            // Show the warning
+            showFeedback("Could not connect to the cloud. Please check your internet connection.", "error", 5000);
+            taskList.innerHTML = '<div class="no-tasks">Internet connection required to load your tasks.</div>';
         }
     } catch (error) {
-        console.error("Error formatting date:", error);
-        return dateString; // Return the original string if there's an error
+        console.error('Error initializing Firebase:', error);
+        // Show the error
+        showFeedback("Could not connect to the cloud. Please check your internet connection.", "error", 5000);
+        taskList.innerHTML = '<div class="no-tasks">Internet connection required to load your tasks.</div>';
     }
 }
 
-// Compare two dates to see if they are the same day
-// This function avoids timezone issues by comparing date components directly
-function isSameDay(date1, date2) {
-    // Extract date components from both dates
-    const year1 = date1.getFullYear();
-    const month1 = date1.getMonth();
-    const day1 = date1.getDate();
+// Monitor Firebase connection status with improved handling
+function setupFirebaseConnectionMonitoring() {
+    if (!db) return;
     
-    const year2 = date2.getFullYear();
-    const month2 = date2.getMonth();
-    const day2 = date2.getDate();
+    // Keep track of connection state
+    let isConnected = false;
+    let connectionMessageShown = false;
     
-    // Compare date components only, ignoring time and timezone
-    return year1 === year2 && month1 === month2 && day1 === day2;
-}
-
-function groupTasksByDate(taskList) {
-    const groups = {};
-    
-    taskList.forEach(task => {
-        let groupKey;
+    // Listen for connection changes
+    db.ref('.info/connected').on('value', (snap) => {
+        const newConnectionState = snap.val() === true;
         
-        if (task.dueDate) {
-            // Extract YYYY-MM-DD from ISO string and parse components
-            const dateOnly = task.dueDate.split('T')[0];
-            const dateParts = dateOnly.split('-').map(part => parseInt(part, 10));
+        // Only show messages when the state changes
+        if (newConnectionState !== isConnected) {
+            isConnected = newConnectionState;
             
-            // Create a date object for comparison purposes only
-            // This avoids timezone shifts by using specific components
-            const dueDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-            
-            // Reference dates for comparison
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Reset time to start of day
-            
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            // Calculate the day after tomorrow
-            const dayAfterTomorrow = new Date(today);
-            dayAfterTomorrow.setDate(today.getDate() + 2);
-            
-            // Determine group key based on date comparison
-            if (isSameDay(dueDate, today)) {
-                groupKey = 'Today';
-            } else if (isSameDay(dueDate, tomorrow)) {
-                groupKey = 'Tomorrow';
-            } else if (isSameDay(dueDate, dayAfterTomorrow)) {
-                // Use the day name
-                groupKey = dayAfterTomorrow.toLocaleDateString(undefined, { weekday: 'long' });
-            } else if (dueDate < today) {
-                groupKey = 'Overdue';
+            if (isConnected) {
+                console.log('Connected to Firebase');
+                // Clear any connection warning if it was shown
+                if (connectionMessageShown) {
+                    showFeedback("Connected to cloud storage.", "success", 2000);
+                    connectionMessageShown = false;
+                }
             } else {
-                // Group by week or month using actual date component comparison
-                // Calculate approximate days difference
-                const diffTime = dueDate.getTime() - today.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
-                // Format the display date using the original date parts
-                const displayDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-                
-                if (diffDays <= 7) {
-                    groupKey = displayDate.toLocaleDateString(undefined, { weekday: 'long' });
-                } else if (diffDays <= 30) {
-                    groupKey = displayDate.toLocaleDateString(undefined, { 
-                        month: 'short', 
-                        day: 'numeric',
-                        weekday: 'long'
-                    });
-                } else {
-                    groupKey = displayDate.toLocaleDateString(undefined, { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric',
-                        weekday: 'long'
-                    });
-                }
+                console.warn('Not connected to Firebase');
+                showFeedback("Not connected to cloud storage. Please check your internet connection.", "warning", 5000);
+                connectionMessageShown = true;
             }
-        } else {
-            // No due date
-            groupKey = 'No Due Date';
-        }
-        
-        if (!groups[groupKey]) {
-            groups[groupKey] = [];
-        }
-        
-        groups[groupKey].push(task);
-    });
-    
-    // Determine display order for the groups
-    const groupOrder = [
-        'Overdue', 
-        'Today', 
-        'Tomorrow',
-        'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 
-        'This Week', 
-        'This Month', 
-        'Future', 
-        'No Due Date'
-    ];
-    
-    // Sort the groups
-    const sortedGroups = {};
-    groupOrder.forEach(key => {
-        if (groups[key] && groups[key].length > 0) {
-            // Sort tasks within each group
-            groups[key].sort((a, b) => {
-                // First by priority
-                const priorityOrder = { high: 0, medium: 1, low: 2 };
-                const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
-                
-                if (priorityDiff !== 0) return priorityDiff;
-                
-                // Then by due date (if both have it)
-                if (a.dueDate && b.dueDate) {
-                    return new Date(a.dueDate) - new Date(b.dueDate);
-                }
-                
-                // Then by creation date
-                return new Date(a.createdAt) - new Date(b.createdAt);
-            });
-            
-            sortedGroups[key] = groups[key];
         }
     });
     
-    // Add any groups not in the predefined order
-    Object.keys(groups).forEach(key => {
-        if (!groupOrder.includes(key) && groups[key].length > 0) {
-            sortedGroups[key] = groups[key];
-        }
-    });
-    
-    return sortedGroups;
-}
-
-// Show feedback message to the user
-function showFeedback(message, type = "success", customDuration = null) {
-    taskFeedback.textContent = message;
-    taskFeedback.className = `feedback ${type}`;
-    
-    // Clear any existing timeout
-    if (window.feedbackTimeoutId) {
-        clearTimeout(window.feedbackTimeoutId);
-    }
-    
-    // Set duration based on message type or custom value
-    let duration;
-    if (customDuration !== null) {
-        duration = customDuration;
-    } else if (type === "warning" || type === "error") {
-        duration = 5000; // Reduced from 8000ms to 5000ms for warnings/errors
-    } else {
-        duration = 2000; // Reduced from 3000ms to 2000ms for normal messages
-    }
-    
-    // Set timeout to clear the message
-    window.feedbackTimeoutId = setTimeout(() => {
-        if (taskFeedback.textContent === message) {
+    // Set a timeout to clear the warning if we don't get a definitive answer
+    setTimeout(() => {
+        if (connectionMessageShown) {
+            // Clear the message if it's still showing after timeout
             taskFeedback.textContent = "";
             taskFeedback.className = "feedback";
+            connectionMessageShown = false;
         }
-        window.feedbackTimeoutId = null;
-    }, duration);
+    }, 7000);
 }
 
-// Initialize the app on load
-document.addEventListener('DOMContentLoaded', init);
+// Load tasks from Firebase Realtime Database
+function loadTasksFromFirebase() {
+    if (!db) {
+        console.warn('Firebase database not initialized');
+        taskList.innerHTML = '<div class="no-tasks">Internet connection required to load your tasks.</div>';
+        return;
+    }
+    
+    console.log('Loading tasks from Firebase...');
+    taskList.innerHTML = '<div class="loading"><div class="spinner"></div> Loading your tasks...</div>';
+    
+    // Set a timeout in case Firebase doesn't respond - reduced from 15s to 8s
+    const timeoutId = setTimeout(() => {
+        console.warn('Firebase load timed out');
+        taskList.innerHTML = '<div class="no-tasks">Connection timeout. Please check your internet and try again.</div>';
+        showFeedback("Connection timeout. Please check your internet connection.", "error", 5000);
+    }, 8000); // Reduced timeout from 15s to 8s
+    
+    db.ref('tasks').once('value')
+        .then(snapshot => {
+            clearTimeout(timeoutId); // Clear the timeout since we got a response
+            
+            const data = snapshot.val();
+            if (data) {
+                const tasksArray = Object.values(data);
+                console.log(`Loaded ${tasksArray.length} tasks from Firebase`);
+                
+                // Sort by creation date (newest first)
+                tasksArray.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                // Ensure all tasks have the notes field
+                tasksArray.forEach(task => {
+                    if (!task.hasOwnProperty('notes')) {
+                        task.notes = '';
+                    }
+                });
+                
+                tasks = tasksArray;
+            } else {
+                tasks = [];
+                console.log('No tasks found in Firebase');
+            }
+            renderTasks();
+        })
+        .catch(error => {
+            clearTimeout(timeoutId); // Clear the timeout since we got a response (an error)
+            console.error('Error loading tasks from Firebase:', error);
+            taskList.innerHTML = '<div class="no-tasks">Error loading tasks. Please check your internet connection and try again.</div>';
+            showFeedback("Error loading your tasks. Please check your internet connection.", "error", 5000);
+        });
+}
+
+// Load theme preference from local storage
+function loadThemePreference() {
+    try {
+        const savedTheme = localStorage.getItem('agenda-theme');
+        if (savedTheme === 'dark') {
+            darkMode = true;
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.getElementById('checkbox').checked = true;
+            document.getElementById('theme-icon').classList.replace('fa-moon', 'fa-sun');
+        }
+    } catch (error) {
+        console.warn('Could not access localStorage for theme:', error);
+    }
+}
+
+// Save theme preference to local storage
+function saveThemePreference(isDark) {
+    try {
+        localStorage.setItem('agenda-theme', isDark ? 'dark' : 'light');
+    } catch (error) {
+        console.warn('Could not save theme to localStorage:', error);
+    }
+}
+
+// Add event listeners
+function addEventListeners() {
+    // Task input
+    addTaskBtn.addEventListener('click', handleAddTask);
+    taskInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleAddTask();
+        }
+    });
+
+    // Search and filters
+    searchInput.addEventListener('input', renderTasks);
+    filterDropdown.addEventListener('change', () => {
+        currentFilter = filterDropdown.value;
+        renderTasks();
+    });
+
+    // Chat
+    chatSendBtn.addEventListener('click', handleChatSend);
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleChatSend();
+        }
+    });
+    
+    // Theme toggle
+    const themeToggle = document.getElementById('checkbox');
+    const themeIcon = document.getElementById('theme-icon');
+    
+    themeToggle.addEventListener('change', function() {
+        if (this.checked) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            themeIcon.classList.replace('fa-moon', 'fa-sun');
+            darkMode = true;
+        } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            themeIcon.classList.replace('fa-sun', 'fa-moon');
+            darkMode = false;
+        }
+        saveThemePreference(darkMode);
+    });
+}
+
+// Sync tasks to Firebase
+function syncTasksToCloud() {
+    if (!db || !isOnline) {
+        console.warn('Cannot sync to Firebase: database not initialized or offline');
+        showFeedback("Cannot save changes - you are offline.", "error");
+        return Promise.resolve(false);
+    }
+    
+    console.log('Syncing tasks to Firebase...');
+    showFeedback("Saving to cloud...", "info");
+    
+    // Convert tasks array to object with task IDs as keys
+    const tasksObject = {};
+    tasks.forEach(task => {
+        // Make sure all fields are properly set
+        const cleanTask = {
+            id: task.id,
+            title: task.title || '',
+            description: task.description || '',
+            createdAt: task.createdAt || new Date().toISOString(),
+            completed: !!task.completed,
+            dueDate: task.dueDate || null,
+            dueTime: task.dueTime || null,
+            priority: task.priority || 'medium',
+            category: task.category || 'general',
+            deviceId: deviceId,
+            notes: task.notes || ''
+        };
+        tasksObject[task.id] = cleanTask;
+    });
+    
+    return db.ref('tasks').set(tasksObject)
+        .then(() => {
+            console.log('Tasks synced to Firebase successfully');
+            showFeedback("Saved to cloud successfully!", "success");
+            
+            // Double-check: verify we can read the data back
+            return db.ref('tasks').once('value');
+        })
+        .then(snapshot => {
+            const savedData = snapshot.val();
+            console.log(`Verified ${Object.keys(savedData || {}).length} tasks in Firebase`);
+            
+            // Update timestamp
+            return db.ref('lastSync').set({
+                timestamp: Date.now(),
+                device: deviceId
+            });
+        })
+        .then(() => {
+            console.log('Sync verification successful');
+            return true;
+        })
+        .catch(error => {
+            console.error('Error syncing tasks to Firebase:', error);
+            showFeedback("Could not save to cloud. Please check your internet connection.", "error");
+            return false;
+        });
+}
+
+// Handle adding a task
+async function handleAddTask() {
+    const taskText = taskInput.value.trim();
+    if (!taskText) return;
+
+    if (!isOnline || !db) {
+        showFeedback("Cannot add task - you are offline.", "error");
+        return;
+    }
+
+    // Show processing indicator
+    inputProcessing.innerHTML = '<div class="spinner"></div> Analyzing your task...';
+    console.log('Adding new task:', taskText);
+    
+    // Special case for tasks starting with "URGENT"
+    if (taskText.toUpperCase().startsWith('URGENT')) {
+        console.log('Detected URGENT prefix, setting high priority');
+        // Parse with our fallback parser first to guarantee day name detection
+        const fallbackTask = createFallbackTaskObject(taskText);
+        console.log('Fallback parser result:', fallbackTask);
+        
+        // Set a timeout to ensure the UI doesn't get stuck in processing state
+        const analysisTimeoutId = setTimeout(() => {
+            console.warn('Task analysis timed out, proceeding with fallback task');
+            inputProcessing.textContent = ''; // Clear the processing indicator
+            addParsedTask(fallbackTask, taskText);
+        }, 8000); // 8 seconds timeout
+        
+        try {
+            // Still try the AI parser as well
+            const parsedTask = await parseTaskWithAI(taskText);
+            clearTimeout(analysisTimeoutId); // Clear the timeout
+            console.log('Task parsed successfully:', parsedTask);
+            
+            // Force high priority for URGENT tasks
+            parsedTask.priority = 'high';
+            
+            // Use the fallback's due date if AI didn't find one
+            if (!parsedTask.dueDate && fallbackTask.dueDate) {
+                parsedTask.dueDate = fallbackTask.dueDate;
+            }
+            
+            // Clear the input and processing indicator immediately
+            taskInput.value = '';
+            inputProcessing.textContent = '';
+            
+            // Create the task object and add it
+            addParsedTask(parsedTask, taskText);
+        } catch (error) {
+            clearTimeout(analysisTimeoutId); // Clear the timeout
+            console.error('Error with AI parsing:', error);
+            
+            // Clear the processing indicator
+            inputProcessing.textContent = '';
+            
+            // Add using the fallback parser results
+            addParsedTask(fallbackTask, taskText);
+        }
+    } else {
+        // Regular task flow
+        // Set a timeout to ensure the UI doesn't get stuck in processing state
+        const analysisTimeoutId = setTimeout(() => {
+            console.warn('Task analysis timed out, proceeding with basic task');
+            inputProcessing.textContent = ''; // Clear the processing indicator
+            
+            // Use fallback parser instead of completely basic task
+            const fallbackTask = createFallbackTaskObject(taskText);
+            console.log('Fallback parser result after timeout:', fallbackTask);
+            addParsedTask(fallbackTask, taskText);
+        }, 12000); // 12 seconds timeout for regular tasks
+        
+        try {
+            // Parse the task with AI
+            const parsedTask = await parseTaskWithAI(taskText);
+            clearTimeout(analysisTimeoutId); // Clear the timeout
+            console.log('Task parsed successfully:', parsedTask);
+            
+            // Also run the fallback parser as a backup
+            const fallbackTask = createFallbackTaskObject(taskText);
+            console.log('Fallback parser result after AI success:', fallbackTask);
+            
+            // Use fallback date if AI didn't find one but fallback did
+            if (!parsedTask.dueDate && fallbackTask.dueDate) {
+                console.log('Using fallback due date because AI parsing did not return one');
+                parsedTask.dueDate = fallbackTask.dueDate;
+            }
+            
+            // Clear the input and processing indicator immediately
+            taskInput.value = '';
+            inputProcessing.textContent = '';
+            
+            // Create the task object and add it
+            addParsedTask(parsedTask, taskText);
+        } catch (error) {
+            clearTimeout(analysisTimeoutId); // Clear the timeout
+            console.error('Error adding task:', error);
+            
+            // Clear the processing indicator

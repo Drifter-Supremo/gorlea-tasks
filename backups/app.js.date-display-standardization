@@ -2215,41 +2215,46 @@ function formatDate(dateString) {
     if (!dateString) return '';
     
     try {
-        // IMPORTANT: Treat the stored date as the source of truth
-        // Create a date object without timezone shifts for comparison only
-        const dateOnly = dateString.split('T')[0]; // Extract YYYY-MM-DD part
-        const dateParts = dateOnly.split('-').map(part => parseInt(part, 10));
+        // Fix timezone issues by ensuring consistent local date interpretation
+        // For YYYY-MM-DD format, we need to ensure it's interpreted as local time, not UTC
+        const originalDate = new Date(dateString);
         
-        // For comparison purposes only - not for display (avoids timezone shifts)
-        const dateForComparison = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+        // Create a date at the same local time as the ISO date
+        // This ensures the date is interpreted in the user's local timezone
+        const localDate = new Date(originalDate.getTime());
         
-        // Get today, tomorrow, and day after tomorrow for comparison
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         
+        // Calculate the day after tomorrow
         const dayAfterTomorrow = new Date(today);
         dayAfterTomorrow.setDate(today.getDate() + 2);
         
-        // Compare only the date parts for special labels
+        // Compare only the date parts (year, month, day), not time or timezone
         const isToday = 
-            dateForComparison.getFullYear() === today.getFullYear() &&
-            dateForComparison.getMonth() === today.getMonth() &&
-            dateForComparison.getDate() === today.getDate();
+            localDate.getFullYear() === today.getFullYear() &&
+            localDate.getMonth() === today.getMonth() &&
+            localDate.getDate() === today.getDate();
         
         const isTomorrow = 
-            dateForComparison.getFullYear() === tomorrow.getFullYear() &&
-            dateForComparison.getMonth() === tomorrow.getMonth() &&
-            dateForComparison.getDate() === tomorrow.getDate();
+            localDate.getFullYear() === tomorrow.getFullYear() &&
+            localDate.getMonth() === tomorrow.getMonth() &&
+            localDate.getDate() === tomorrow.getDate();
         
         const isDayAfterTomorrow = 
-            dateForComparison.getFullYear() === dayAfterTomorrow.getFullYear() &&
-            dateForComparison.getMonth() === dayAfterTomorrow.getMonth() &&
-            dateForComparison.getDate() === dayAfterTomorrow.getDate();
+            localDate.getFullYear() === dayAfterTomorrow.getFullYear() &&
+            localDate.getMonth() === dayAfterTomorrow.getMonth() &&
+            localDate.getDate() === dayAfterTomorrow.getDate();
         
-        // Check if it's today, tomorrow, or this week - use fixed labels
+        console.log(`Formatting date ${dateString}:`, 
+            `LocalDate: ${localDate.toDateString()}, `, 
+            `Today: ${today.toDateString()}, `,
+            `Tomorrow: ${tomorrow.toDateString()}, `,
+            `Day after tomorrow: ${dayAfterTomorrow.toDateString()}, `,
+            `isToday: ${isToday}, isTomorrow: ${isTomorrow}, isDayAfterTomorrow: ${isDayAfterTomorrow}`);
+        
+        // Check if it's today, tomorrow, or this week
         if (isToday) {
             return 'Today';
         } else if (isTomorrow) {
@@ -2258,12 +2263,8 @@ function formatDate(dateString) {
             // Get day name for day after tomorrow
             return dayAfterTomorrow.toLocaleDateString(undefined, { weekday: 'long' });
         } else {
-            // IMPORTANT: Use a new date object created from the parts to ensure
-            // toLocaleDateString() formats exactly the date that was stored
-            const displayDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-            
-            // Format as Month Day, Year with weekday
-            return displayDate.toLocaleDateString(undefined, { 
+            // Format as Month Day, Year
+            return localDate.toLocaleDateString(undefined, { 
                 year: 'numeric', 
                 month: 'short', 
                 day: 'numeric',
@@ -2276,20 +2277,11 @@ function formatDate(dateString) {
     }
 }
 
-// Compare two dates to see if they are the same day
-// This function avoids timezone issues by comparing date components directly
 function isSameDay(date1, date2) {
-    // Extract date components from both dates
-    const year1 = date1.getFullYear();
-    const month1 = date1.getMonth();
-    const day1 = date1.getDate();
-    
-    const year2 = date2.getFullYear();
-    const month2 = date2.getMonth();
-    const day2 = date2.getDate();
-    
     // Compare date components only, ignoring time and timezone
-    return year1 === year2 && month1 === month2 && day1 === day2;
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
 }
 
 function groupTasksByDate(taskList) {
@@ -2299,18 +2291,12 @@ function groupTasksByDate(taskList) {
         let groupKey;
         
         if (task.dueDate) {
-            // Extract YYYY-MM-DD from ISO string and parse components
-            const dateOnly = task.dueDate.split('T')[0];
-            const dateParts = dateOnly.split('-').map(part => parseInt(part, 10));
+            // Ensure consistent date handling by creating date objects with local timezone consideration
+            const originalDueDate = new Date(task.dueDate);
+            // Create a date object that preserves the local date components
+            const dueDate = new Date(originalDueDate.getTime());
             
-            // Create a date object for comparison purposes only
-            // This avoids timezone shifts by using specific components
-            const dueDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-            
-            // Reference dates for comparison
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Reset time to start of day
-            
             const tomorrow = new Date(today);
             tomorrow.setDate(tomorrow.getDate() + 1);
             
@@ -2318,7 +2304,6 @@ function groupTasksByDate(taskList) {
             const dayAfterTomorrow = new Date(today);
             dayAfterTomorrow.setDate(today.getDate() + 2);
             
-            // Determine group key based on date comparison
             if (isSameDay(dueDate, today)) {
                 groupKey = 'Today';
             } else if (isSameDay(dueDate, tomorrow)) {
@@ -2329,24 +2314,19 @@ function groupTasksByDate(taskList) {
             } else if (dueDate < today) {
                 groupKey = 'Overdue';
             } else {
-                // Group by week or month using actual date component comparison
-                // Calculate approximate days difference
-                const diffTime = dueDate.getTime() - today.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
-                // Format the display date using the original date parts
-                const displayDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+                // Group by week or month
+                const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
                 
                 if (diffDays <= 7) {
-                    groupKey = displayDate.toLocaleDateString(undefined, { weekday: 'long' });
+                    groupKey = dueDate.toLocaleDateString(undefined, { weekday: 'long' });
                 } else if (diffDays <= 30) {
-                    groupKey = displayDate.toLocaleDateString(undefined, { 
+                    groupKey = dueDate.toLocaleDateString(undefined, { 
                         month: 'short', 
                         day: 'numeric',
                         weekday: 'long'
                     });
                 } else {
-                    groupKey = displayDate.toLocaleDateString(undefined, { 
+                    groupKey = dueDate.toLocaleDateString(undefined, { 
                         year: 'numeric', 
                         month: 'short', 
                         day: 'numeric',

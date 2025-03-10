@@ -58,6 +58,7 @@ The application uses a multi-layered approach to AI integration:
 #### Direct Client-Side Integration
 - Local task parsing with fallback algorithms when offline or for quick response
 - Client-side API calls to OpenAI when the user provides their API key
+- Rich contextual information provided to AI for improved understanding
 
 #### Backend Integration via Firebase Functions
 - More secure API key handling through Firebase Functions config
@@ -69,6 +70,13 @@ The application uses a multi-layered approach to AI integration:
 #### Graceful Degradation
 - Fallback to basic functionality when AI services are unavailable
 - Local parsing algorithms as backup to cloud AI
+- Multi-layered validation to prevent incorrect interpretations
+
+#### Contextual Enhancement
+- Comprehensive date/time context generation for temporal AI operations
+- Calendar view-style context model using `generateDateTimeContext()`
+- Multiple format representations of the same data (ISO, human-readable, etc.)
+- Both absolute dates and relational references (today, tomorrow, this week)
 
 ### 4. Real-Time Synchronization
 
@@ -110,6 +118,72 @@ The UI implements several consistent visual patterns:
 - **Consistent Spacing**: Standard gap measurements between components
 - **Responsive Breakpoints**: Specific adaptations at mobile breakpoints
 
+### 8. Date Handling Architecture
+
+The application uses a sophisticated approach to date parsing and handling, now enhanced with user confirmation:
+
+```mermaid
+graph TD
+    TaskInput[Task Input] --> AIParser[AI Parser with Rich Context]
+    TaskInput --> FallbackParser[Fallback Pattern Parser]
+    
+    AIParser -- "Success" --> DateValidation[Date Validation Layer]
+    AIParser -- "Failure/Timeout" --> FallbackParser
+    
+    FallbackParser --> DateValidation
+    
+    DateValidation --> UserConfirmation[Date/Time Confirmation Modal]
+    
+    UserConfirmation -- "User Accepts/Modifies" --> TaskCreation[Task Creation]
+    UserConfirmation -- "User Cancels" --> Cancel[Cancel Task Creation]
+    
+    subgraph "Rich Context Generation"
+        DateContext[generateDateTimeContext]
+        CurrentWeek[This Week's Dates]
+        NextWeek[Next Week's Dates]
+        SpecialDates[Reference Dates]
+        
+        DateContext --> CurrentWeek
+        DateContext --> NextWeek
+        DateContext --> SpecialDates
+    end
+    
+    DateContext --> AIParser
+    
+    subgraph "User Confirmation Modal"
+        QuickSelect[Quick-Select Options]
+        DatePicker[Calendar Date Picker]
+        TimePicker[Time Dropdown]
+        
+        QuickSelect -- "Today/Tomorrow/Next Week/None" --> DateSelection
+        DatePicker --> DateSelection[Selected Date]
+        TimePicker --> TimeSelection[Selected Time]
+        
+        DateSelection --> Confirmation[Confirm Task]
+        TimeSelection --> Confirmation
+    end
+```
+
+#### Rich Context Generation
+- `generateDateTimeContext()` creates comprehensive temporal information
+- Multiple date formats (ISO, human-readable, etc.) for the same point in time
+- Calendar-style week view with all days clearly identified
+- Special reference dates (tomorrow, month boundaries, etc.)
+
+#### Multi-Layered Date Validation
+- Initial validation by AI with rich context
+- Secondary validation of AI-returned dates against system time
+- Detection of dates suspiciously far in the past (>30 days)
+- Identification of dates unreasonably in the future (>1 year)
+- Fallback to pattern-based detection when needed
+
+#### Date Pattern Recognition
+- Support for explicit formats (MM/DD/YYYY)
+- Support for natural language (tomorrow, next Friday)
+- Support for month name with day (March 15th)
+- Support for day name with month and day (Thursday March 13th)
+- Relative date expressions (this week, next month)
+
 ## Error Handling Patterns
 
 The application implements several error handling strategies:
@@ -119,6 +193,8 @@ The application implements several error handling strategies:
 3. **Retry Logic**: Important operations (like Firebase sync) retry on failure
 4. **User Feedback**: Clear error messages with actionable information
 5. **Connection Monitoring**: Active tracking of online/offline status
+6. **Multi-Layered Validation**: Especially for date parsing and AI-interpreted content
+7. **Contextual Logging**: Detailed context information alongside errors for better debugging
 
 ## Security Patterns
 

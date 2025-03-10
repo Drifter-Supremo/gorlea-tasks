@@ -22,6 +22,44 @@
 - Gracefully degrade AI functionality when offline
 - Store API keys securely, with user API keys in localStorage
 - Always show clear feedback when AI processing is happening
+- Use rich contextual information when communicating with AI services
+- Implement multi-layered validation for AI-parsed data
+
+### AI Context Patterns
+- Provide comprehensive date/time context to time-sensitive AI operations
+- Use "calendar view" approach to communicate temporal information
+- Include multiple format representations of the same data (ISO, human-readable)
+- Supply both specific dates and relational context (today, tomorrow, next week)
+- Always validate AI-returned dates against system time to catch errors
+- Log detailed context information for debugging incorrect interpretations
+
+### Date Handling Patterns
+- Treat user-selected dates as the single source of truth throughout the application
+- Use component-based date comparison (year, month, day) instead of direct Date object comparison
+- When parsing dates from strings, extract the components directly to avoid timezone shifts
+- Use the enhanced `isSameDay` function that compares date components directly
+- Never create new Date objects from date strings for display purposes without handling timezone issues
+- When displaying dates, use the updated `formatDate()` function that preserves the original date
+- In the `groupTasksByDate()` function, maintain the user-selected date without reinterpretation
+- For task due dates with time, ensure consistent formatting in both the UI and the description text
+- Include proper ordinal suffixes (1st, 2nd, 3rd, etc.) using the `getDaySuffix` helper function
+- Test date handling with edge cases where the date might cross day boundaries in different timezones
+- Always use the date/time confirmation modal for reliable date/time selection
+- Prefer user-controlled date selection over purely AI-inferred dates
+- Maintain hybrid approach: AI for initial parsing, user for final confirmation
+- Provide quick-select buttons for common date options (Today, Tomorrow, Next Week)
+
+### Date/Time Modal Patterns
+- Always show the date/time confirmation modal before creating tasks with due dates
+- Pre-select the date option based on AI parsing when available
+- Generate time options in consistent 15-minute increments
+- Display times in 12-hour format (with AM/PM) for better readability
+- Default time selection to 9:00 AM if no time is specified
+- Maintain state variables to track original text and parsed task during confirmation
+- Provide clear visual indication for selected date options
+- Allow cancellation without losing the original task text
+- Update task creation only after explicit user confirmation
+- Ensure the modal is responsive and works well on mobile devices
 
 ### Task Data Structure
 - Tasks must include: id, title, createdAt, completed, priority fields
@@ -29,6 +67,7 @@
 - Tasks are stored in Firebase with device ID for reference
 - Priority should be one of: "high", "medium", "low"
 - Due dates should be in ISO format (YYYY-MM-DD)
+- Date handling should always consider current date context
 
 ## User Preferences
 
@@ -68,6 +107,20 @@
 - Throttle expensive AI operations when appropriate
 - Modern chat interface with clear visual distinction between user and AI messages
 
+### Code Safety & Backup Procedures
+- Create incremental backups at key points during development
+- Use the .bak extension for manual backups (app.js.bak)
+- When working on large/complex functions, save progress frequently
+- For token-limit scenarios, implement a structured approach:
+  - Break large changes into smaller, focused modifications
+  - Complete one code area before moving to the next
+  - Document progress in comments to enable resume if interrupted
+- When faced with VS Code conflicts:
+  - Always choose "Accept Current Change" to keep the editor's version
+  - If options aren't visible, manually select & copy from the right (green) side
+  - After resolving, immediately create a proper backup
+- Test changes incrementally to avoid large, untested code blocks
+
 ## Security Guidelines
 
 ### API Key Handling
@@ -104,3 +157,34 @@ Before deploying changes:
 5. Verify dark/light mode switching
 6. Ensure all Firebase operations work correctly
 7. Test the behavior of the AI assistant
+
+## Recovery Procedures
+
+### VS Code Conflict Resolution
+1. When VS Code shows "(in file) → (in Visual Studio Code)" tabs:
+   - This indicates unsaved changes or conflict between disk and memory versions
+   - ALWAYS choose "Accept Current Change" to keep the editor's in-memory version
+   - Alternatively, copy all content from the right side (new/current version)
+   - NEVER close VS Code until conflict is resolved and backed up
+   
+2. After a token limit interruption:
+   - Examine both conflicted versions to understand where code was cut off
+   - Save a backup with .bak extension immediately
+   - Complete the implementation based on the Memory Bank documentation
+   - Test thoroughly before considering the recovery complete
+
+3. Date Handling and Parsing Issues:
+   - Date parsing is particularly sensitive to edge cases
+   - Test with multiple date formats including the problematic ones
+   - Always include fallback date detection for new formats
+   - Make sure the date parsing respects regional date formats
+   - Provide rich context to AI date parsers (today's date, current week, next week)
+   - Implement multi-layered validation for AI-returned dates
+   - Check for dates suspiciously in the past or unreasonably in the future
+   - Log detected date patterns along with final parsed date for debugging
+   - Watch for timezone conversion issues when creating Date objects from ISO strings
+   - Use `new Date(originalDate.getTime())` to preserve local date components
+   - When formatting dates in descriptions, use proper ordinal suffixes
+   - Test date comparisons with dates that cross day boundaries in different timezones
+   - Be careful when displaying dates - ensure consistent formatting across all UI elements
+   - Always use `isSameDay` for date equality comparisons, not direct comparison

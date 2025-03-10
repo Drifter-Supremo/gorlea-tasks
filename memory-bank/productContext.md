@@ -27,6 +27,12 @@ Instead of filling out forms, users can simply type "Call John tomorrow at 2 PM 
 - Categorizes it (likely as "work" due to "project" context)
 - Assigns an appropriate priority
 
+The system's advanced date parsing capabilities understand a wide range of natural time expressions:
+- Specific dates: "March 15th" or "Thursday March 13th" 
+- Relative dates: "next Friday", "this weekend", "in two weeks"
+- Time references: "morning", "afternoon", "at 3 PM"
+- Contextual understanding: The system knows today's date, the current week, and next week's dates
+
 ### 2. AI-Driven Organization
 The app intelligently:
 - Groups tasks by date and priority
@@ -70,7 +76,15 @@ Gorlea Tasks serves:
 What sets Gorlea Tasks apart from other task management applications:
 
 1. **AI-First Design**: Built around AI capabilities rather than adding them as an afterthought
+   - Rich contextual awareness provides a "calendar view" to the AI for better understanding
+   - Multi-layered approach combines AI intelligence with fallback pattern recognition
+   - Sophisticated validation prevents incorrect date detection and overdue task issues
+
 2. **Natural Interface**: Prioritizes natural language over form-filling
+   - Understands complex date expressions like "Thursday March 13th" or "next Tuesday afternoon"
+   - Correctly interprets relative dates based on current day/week context
+   - Handles ambiguous time references with smart defaults
+
 3. **Proactive Assistance**: Suggests follow-ups rather than waiting for user input
 4. **Simplified Experience**: Focuses on essential functionality without feature bloat
 5. **Adaptive Intelligence**: Learns user patterns to improve suggestions over time

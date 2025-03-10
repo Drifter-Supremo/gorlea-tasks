@@ -82,8 +82,6 @@ let darkMode = false;
 let db = null; // Firebase database reference
 let isOnline = navigator.onLine;
 let deviceId = null; // Unique identifier for this device
-let originalTaskText = ''; // Store the original task text for reference
-let currentParsedTask = null; // Store the parsed task while showing the date/time modal
 
 // Initialize the app
 function init() {
@@ -382,184 +380,6 @@ function syncTasksToCloud() {
         });
 }
 
-// Generate time options for the dropdown (15-minute increments)
-function populateTimeOptions() {
-    const timeSelector = document.getElementById('time-selector');
-    timeSelector.innerHTML = '<option value="">No Specific Time</option>';
-    
-    for (let hour = 0; hour < 24; hour++) {
-        for (let minute = 0; minute < 60; minute += 15) {
-            const hour12 = hour % 12 || 12;
-            const period = hour < 12 ? 'AM' : 'PM';
-            const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-            const displayTime = `${hour12}:${minute.toString().padStart(2, '0')} ${period}`;
-            
-            const option = document.createElement('option');
-            option.value = timeString;
-            option.textContent = displayTime;
-            
-            // Default to 9:00 AM
-            if (hour === 9 && minute === 0) {
-                option.selected = true;
-            }
-            
-            timeSelector.appendChild(option);
-        }
-    }
-}
-
-// Function to show the date/time modal
-function showDateTimeModal(parsedTask, taskText) {
-    // Store the original task text and parsed task for later use
-    originalTaskText = taskText;
-    currentParsedTask = parsedTask;
-    
-    // Populate time options
-    populateTimeOptions();
-    
-    // Reset any previously selected date options
-    document.querySelectorAll('.date-option.selected').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    
-    // Set initial date value if AI detected one
-    const datePicker = document.getElementById('date-picker');
-    if (parsedTask.dueDate) {
-        // Extract just the date part of the ISO string
-        const dateOnly = parsedTask.dueDate.split('T')[0];
-        datePicker.value = dateOnly;
-        
-        // Set the appropriate quick select button if it matches
-        const today = new Date();
-        const tomorrow = new Date();
-        tomorrow.setDate(today.getDate() + 1);
-        const nextWeek = new Date();
-        nextWeek.setDate(today.getDate() + 7);
-        
-        const todayStr = today.toISOString().split('T')[0];
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        const nextWeekStr = nextWeek.toISOString().split('T')[0];
-        
-        if (dateOnly === todayStr) {
-            document.querySelector('.date-option[data-option="today"]').classList.add('selected');
-        } else if (dateOnly === tomorrowStr) {
-            document.querySelector('.date-option[data-option="tomorrow"]').classList.add('selected');
-        } else if (dateOnly === nextWeekStr) {
-            document.querySelector('.date-option[data-option="next-week"]').classList.add('selected');
-        }
-    }
-    
-    // Set initial time value if AI detected one
-    const timeSelector = document.getElementById('time-selector');
-    if (parsedTask.dueTime) {
-        // Find the closest time option
-        const options = timeSelector.options;
-        for (let i = 0; i < options.length; i++) {
-            if (options[i].value === parsedTask.dueTime) {
-                options[i].selected = true;
-                break;
-            }
-        }
-    }
-    
-    // Show the modal
-    const modal = document.getElementById('date-time-modal');
-    modal.style.display = 'block';
-    
-    // Set up event listeners for the date option buttons
-    setupDateOptionListeners();
-}
-
-// Setup event listeners for date option buttons
-function setupDateOptionListeners() {
-    document.querySelectorAll('.date-option').forEach(button => {
-        // Remove any existing event listeners first
-        const newButton = button.cloneNode(true);
-        button.parentNode.replaceChild(newButton, button);
-        
-        newButton.addEventListener('click', () => {
-            // Clear existing selection
-            document.querySelectorAll('.date-option.selected').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            
-            // Add selected class
-            newButton.classList.add('selected');
-            
-            // Get the date picker
-            const datePicker = document.getElementById('date-picker');
-            
-            // Set date based on option
-            const option = newButton.dataset.option;
-            if (option === 'today') {
-                const today = new Date();
-                datePicker.value = today.toISOString().split('T')[0];
-            } else if (option === 'tomorrow') {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                datePicker.value = tomorrow.toISOString().split('T')[0];
-            } else if (option === 'next-week') {
-                const nextWeek = new Date();
-                nextWeek.setDate(nextWeek.getDate() + 7);
-                datePicker.value = nextWeek.toISOString().split('T')[0];
-            } else if (option === 'no-date') {
-                datePicker.value = '';
-            }
-        });
-    });
-    
-    // Set up confirm and cancel buttons
-    const confirmBtn = document.getElementById('confirm-task-btn');
-    const cancelBtn = document.getElementById('cancel-task-btn');
-    
-    // Remove any existing event listeners
-    const newConfirmBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-    
-    const newCancelBtn = cancelBtn.cloneNode(true);
-    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-    
-    // Add new event listeners
-    newConfirmBtn.addEventListener('click', confirmTaskWithSelectedDate);
-    newCancelBtn.addEventListener('click', cancelTaskCreation);
-}
-
-// Handle date/time confirmation
-function confirmTaskWithSelectedDate() {
-    // Get values from modal
-    const datePicker = document.getElementById('date-picker');
-    const timeSelector = document.getElementById('time-selector');
-    
-    // Update parsed task with user-selected date/time
-    if (datePicker.value) {
-        currentParsedTask.dueDate = datePicker.value;
-    } else {
-        currentParsedTask.dueDate = null;
-    }
-    
-    currentParsedTask.dueTime = timeSelector.value || null;
-    
-    // Hide the modal
-    document.getElementById('date-time-modal').style.display = 'none';
-    
-    // Create the task with the user-confirmed date/time
-    addParsedTask(currentParsedTask, originalTaskText);
-    
-    // Clear the input
-    taskInput.value = '';
-}
-
-// Handle cancellation
-function cancelTaskCreation() {
-    // Hide the modal
-    document.getElementById('date-time-modal').style.display = 'none';
-    
-    // Clear the input processing indicator
-    inputProcessing.textContent = '';
-    
-    // Don't clear the task input in case the user wants to modify it
-}
-
 // Handle adding a task
 async function handleAddTask() {
     const taskText = taskInput.value.trim();
@@ -585,7 +405,7 @@ async function handleAddTask() {
         const analysisTimeoutId = setTimeout(() => {
             console.warn('Task analysis timed out, proceeding with fallback task');
             inputProcessing.textContent = ''; // Clear the processing indicator
-            showDateTimeModal(fallbackTask, taskText);
+            addParsedTask(fallbackTask, taskText);
         }, 8000); // 8 seconds timeout
         
         try {
@@ -602,11 +422,12 @@ async function handleAddTask() {
                 parsedTask.dueDate = fallbackTask.dueDate;
             }
             
-            // Clear the processing indicator immediately
+            // Clear the input and processing indicator immediately
+            taskInput.value = '';
             inputProcessing.textContent = '';
             
-            // Show the date/time confirmation modal
-            showDateTimeModal(parsedTask, taskText);
+            // Create the task object and add it
+            addParsedTask(parsedTask, taskText);
         } catch (error) {
             clearTimeout(analysisTimeoutId); // Clear the timeout
             console.error('Error with AI parsing:', error);
@@ -614,8 +435,8 @@ async function handleAddTask() {
             // Clear the processing indicator
             inputProcessing.textContent = '';
             
-            // Show the date/time confirmation modal with fallback results
-            showDateTimeModal(fallbackTask, taskText);
+            // Add using the fallback parser results
+            addParsedTask(fallbackTask, taskText);
         }
     } else {
         // Regular task flow
@@ -627,7 +448,7 @@ async function handleAddTask() {
             // Use fallback parser instead of completely basic task
             const fallbackTask = createFallbackTaskObject(taskText);
             console.log('Fallback parser result after timeout:', fallbackTask);
-            showDateTimeModal(fallbackTask, taskText);
+            addParsedTask(fallbackTask, taskText);
         }, 12000); // 12 seconds timeout for regular tasks
         
         try {
@@ -646,11 +467,12 @@ async function handleAddTask() {
                 parsedTask.dueDate = fallbackTask.dueDate;
             }
             
-            // Clear the processing indicator immediately
+            // Clear the input and processing indicator immediately
+            taskInput.value = '';
             inputProcessing.textContent = '';
             
-            // Show the date/time confirmation modal
-            showDateTimeModal(parsedTask, taskText);
+            // Create the task object and add it
+            addParsedTask(parsedTask, taskText);
         } catch (error) {
             clearTimeout(analysisTimeoutId); // Clear the timeout
             console.error('Error adding task:', error);
@@ -658,10 +480,10 @@ async function handleAddTask() {
             // Clear the processing indicator
             inputProcessing.textContent = '';
             
-            // Use fallback parser and show the date/time confirmation modal
+            // Use fallback parser instead of completely basic task
             const fallbackTask = createFallbackTaskObject(taskText);
             console.log('Fallback parser result after error:', fallbackTask);
-            showDateTimeModal(fallbackTask, taskText);
+            addParsedTask(fallbackTask, taskText);
         }
     }
 }
@@ -686,18 +508,9 @@ function addParsedTask(parsedTask, originalText) {
     // If we have both date and time, add time to the description for now
     // (since we're not updating the UI to show time yet)
     if (newTask.dueDate && newTask.dueTime && !newTask.description) {
-        // Create a proper date object for consistent formatting
-        const dueDate = new Date(newTask.dueDate);
-        const month = dueDate.toLocaleString('en-US', { month: 'long' });
-        const day = dueDate.getDate();
-        const daySuffix = getDaySuffix(day);
-        
-        newTask.description = `Due at ${formatTime(newTask.dueTime)}. ${month} ${day}${daySuffix} at ${formatTime(newTask.dueTime)}`;
+        newTask.description = `Due at ${formatTime(newTask.dueTime)}`;
     } else if (newTask.dueDate && newTask.dueTime) {
-        // Only add time information if description doesn't already have it
-        if (!newTask.description.includes('Due at')) {
-            newTask.description = `Due at ${formatTime(newTask.dueTime)}. ${newTask.description}`;
-        }
+        newTask.description = `Due at ${formatTime(newTask.dueTime)}. ${newTask.description}`;
     }
 
     if (!isOnline || !db) {
@@ -960,34 +773,29 @@ function renderTaskItem(task) {
         low: '<i class="fas fa-arrow-down-circle"></i> Low'
     };
     
-// Build the task content
-let taskContent = `
-    <div class="task-content">
-        <div class="task-title">
-            ${task.title}
-            <button class="expand-collapse-btn" title="Expand/Collapse">
-                <i class="fas fa-chevron-down"></i>
-            </button>
-        </div>
-        ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
-        <div class="task-details">
-            ${task.dueDate ? `
+    // Build the task content
+    let taskContent = `
+        <div class="task-content">
+            <div class="task-title">${task.title}</div>
+            ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+            <div class="task-details">
+                ${task.dueDate ? `
+                    <span class="task-detail">
+                        <i class="far fa-calendar-alt"></i> 
+                        ${formatDate(task.dueDate)}
+                        ${task.dueTime ? ` at ${formatTime(task.dueTime)}` : ''}
+                    </span>
+                ` : ''}
                 <span class="task-detail">
-                    <i class="far fa-calendar-alt"></i> 
-                    ${formatDate(task.dueDate)}
-                    ${task.dueTime ? ` at ${formatTime(task.dueTime)}` : ''}
+                    ${priorityText[task.priority] || priorityText.medium}
                 </span>
-            ` : ''}
-            <span class="task-detail">
-                ${priorityText[task.priority] || priorityText.medium}
-            </span>
-            ${task.category ? `
-                <span class="task-detail">
-                    <i class="fas fa-tag"></i> 
-                    ${task.category}
-                </span>
-            ` : ''}
-        </div>
+                ${task.category ? `
+                    <span class="task-detail">
+                        <i class="fas fa-tag"></i> 
+                        ${task.category}
+                    </span>
+                ` : ''}
+            </div>
     `;
     
     // Add notes if they exist
@@ -1024,22 +832,10 @@ let taskContent = `
     const completeBtn = taskElement.querySelector('.complete-btn');
     const editBtn = taskElement.querySelector('.edit-btn');
     const deleteBtn = taskElement.querySelector('.delete-btn');
-    const expandCollapseBtn = taskElement.querySelector('.expand-collapse-btn');
     
     completeBtn.addEventListener('click', () => completeTask(task.id));
     editBtn.addEventListener('click', () => editTask(task.id));
     deleteBtn.addEventListener('click', () => deleteTask(task.id));
-    
-    // Add expand/collapse functionality
-    if (expandCollapseBtn) {
-        expandCollapseBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            taskElement.classList.toggle('collapsed');
-        });
-    }
-    
-    // Start with tasks collapsed by default
-    taskElement.classList.add('collapsed');
     
     return taskElement;
 }
@@ -2175,18 +1971,6 @@ async function callOpenAI(messages, model = OPENAI_MODEL, temperature = 0.7) {
 }
 
 // Utility Functions
-
-// Helper function to get day suffix (st, nd, rd, th)
-function getDaySuffix(day) {
-    if (day > 3 && day < 21) return 'th';
-    switch (day % 10) {
-        case 1:  return 'st';
-        case 2:  return 'nd';
-        case 3:  return 'rd';
-        default: return 'th';
-    }
-}
-
 // Format time for display (convert 24-hour format to 12-hour format)
 function formatTime(timeString) {
     if (!timeString) return '';
@@ -2215,41 +1999,39 @@ function formatDate(dateString) {
     if (!dateString) return '';
     
     try {
-        // IMPORTANT: Treat the stored date as the source of truth
-        // Create a date object without timezone shifts for comparison only
-        const dateOnly = dateString.split('T')[0]; // Extract YYYY-MM-DD part
-        const dateParts = dateOnly.split('-').map(part => parseInt(part, 10));
-        
-        // For comparison purposes only - not for display (avoids timezone shifts)
-        const dateForComparison = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-        
-        // Get today, tomorrow, and day after tomorrow for comparison
+        const date = new Date(dateString);
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         
+        // Calculate the day after tomorrow
         const dayAfterTomorrow = new Date(today);
         dayAfterTomorrow.setDate(today.getDate() + 2);
         
-        // Compare only the date parts for special labels
+        // Force using UTC methods for comparison to avoid timezone issues
         const isToday = 
-            dateForComparison.getFullYear() === today.getFullYear() &&
-            dateForComparison.getMonth() === today.getMonth() &&
-            dateForComparison.getDate() === today.getDate();
+            date.getUTCFullYear() === today.getUTCFullYear() &&
+            date.getUTCMonth() === today.getUTCMonth() &&
+            date.getUTCDate() === today.getUTCDate();
         
         const isTomorrow = 
-            dateForComparison.getFullYear() === tomorrow.getFullYear() &&
-            dateForComparison.getMonth() === tomorrow.getMonth() &&
-            dateForComparison.getDate() === tomorrow.getDate();
+            date.getUTCFullYear() === tomorrow.getUTCFullYear() &&
+            date.getUTCMonth() === tomorrow.getUTCMonth() &&
+            date.getUTCDate() === tomorrow.getUTCDate();
         
         const isDayAfterTomorrow = 
-            dateForComparison.getFullYear() === dayAfterTomorrow.getFullYear() &&
-            dateForComparison.getMonth() === dayAfterTomorrow.getMonth() &&
-            dateForComparison.getDate() === dayAfterTomorrow.getDate();
+            date.getUTCFullYear() === dayAfterTomorrow.getUTCFullYear() &&
+            date.getUTCMonth() === dayAfterTomorrow.getUTCMonth() &&
+            date.getUTCDate() === dayAfterTomorrow.getUTCDate();
         
-        // Check if it's today, tomorrow, or this week - use fixed labels
+        console.log(`Formatting date ${dateString}:`, 
+            `Date: ${date.toDateString()}, `, 
+            `Today: ${today.toDateString()}, `,
+            `Tomorrow: ${tomorrow.toDateString()}, `,
+            `Day after tomorrow: ${dayAfterTomorrow.toDateString()}, `,
+            `isToday: ${isToday}, isTomorrow: ${isTomorrow}, isDayAfterTomorrow: ${isDayAfterTomorrow}`);
+        
+        // Check if it's today, tomorrow, or this week
         if (isToday) {
             return 'Today';
         } else if (isTomorrow) {
@@ -2258,12 +2040,8 @@ function formatDate(dateString) {
             // Get day name for day after tomorrow
             return dayAfterTomorrow.toLocaleDateString(undefined, { weekday: 'long' });
         } else {
-            // IMPORTANT: Use a new date object created from the parts to ensure
-            // toLocaleDateString() formats exactly the date that was stored
-            const displayDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-            
-            // Format as Month Day, Year with weekday
-            return displayDate.toLocaleDateString(undefined, { 
+            // Format as Month Day, Year
+            return date.toLocaleDateString(undefined, { 
                 year: 'numeric', 
                 month: 'short', 
                 day: 'numeric',
@@ -2276,20 +2054,10 @@ function formatDate(dateString) {
     }
 }
 
-// Compare two dates to see if they are the same day
-// This function avoids timezone issues by comparing date components directly
 function isSameDay(date1, date2) {
-    // Extract date components from both dates
-    const year1 = date1.getFullYear();
-    const month1 = date1.getMonth();
-    const day1 = date1.getDate();
-    
-    const year2 = date2.getFullYear();
-    const month2 = date2.getMonth();
-    const day2 = date2.getDate();
-    
-    // Compare date components only, ignoring time and timezone
-    return year1 === year2 && month1 === month2 && day1 === day2;
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
 }
 
 function groupTasksByDate(taskList) {
@@ -2299,18 +2067,8 @@ function groupTasksByDate(taskList) {
         let groupKey;
         
         if (task.dueDate) {
-            // Extract YYYY-MM-DD from ISO string and parse components
-            const dateOnly = task.dueDate.split('T')[0];
-            const dateParts = dateOnly.split('-').map(part => parseInt(part, 10));
-            
-            // Create a date object for comparison purposes only
-            // This avoids timezone shifts by using specific components
-            const dueDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-            
-            // Reference dates for comparison
+            const dueDate = new Date(task.dueDate);
             const today = new Date();
-            today.setHours(0, 0, 0, 0); // Reset time to start of day
-            
             const tomorrow = new Date(today);
             tomorrow.setDate(tomorrow.getDate() + 1);
             
@@ -2318,7 +2076,6 @@ function groupTasksByDate(taskList) {
             const dayAfterTomorrow = new Date(today);
             dayAfterTomorrow.setDate(today.getDate() + 2);
             
-            // Determine group key based on date comparison
             if (isSameDay(dueDate, today)) {
                 groupKey = 'Today';
             } else if (isSameDay(dueDate, tomorrow)) {
@@ -2329,24 +2086,19 @@ function groupTasksByDate(taskList) {
             } else if (dueDate < today) {
                 groupKey = 'Overdue';
             } else {
-                // Group by week or month using actual date component comparison
-                // Calculate approximate days difference
-                const diffTime = dueDate.getTime() - today.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
-                // Format the display date using the original date parts
-                const displayDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+                // Group by week or month
+                const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
                 
                 if (diffDays <= 7) {
-                    groupKey = displayDate.toLocaleDateString(undefined, { weekday: 'long' });
+                    groupKey = dueDate.toLocaleDateString(undefined, { weekday: 'long' });
                 } else if (diffDays <= 30) {
-                    groupKey = displayDate.toLocaleDateString(undefined, { 
+                    groupKey = dueDate.toLocaleDateString(undefined, { 
                         month: 'short', 
                         day: 'numeric',
                         weekday: 'long'
                     });
                 } else {
-                    groupKey = displayDate.toLocaleDateString(undefined, { 
+                    groupKey = dueDate.toLocaleDateString(undefined, { 
                         year: 'numeric', 
                         month: 'short', 
                         day: 'numeric',
