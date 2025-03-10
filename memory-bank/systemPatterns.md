@@ -2,12 +2,13 @@
 
 ## Architecture Overview
 
-Gorlea Tasks follows a client-side web application architecture with cloud-backed services and AI integration. The system consists of these main components:
+Gorlea Tasks follows a client-side web application architecture with cloud-backed services, AI integration, and email notification capabilities. The system consists of these main components:
 
 ```mermaid
 graph TD
     Client[Client Browser App] -- Tasks Data --> Firebase[Firebase Realtime DB]
     Client -- AI Requests --> CloudFunctions[Firebase Cloud Functions]
+    Client -- Email Notifications --> EmailJS[EmailJS Service]
     CloudFunctions -- API Calls --> OpenAI[OpenAI API]
     CloudFunctions -- DB Access --> Firebase
     ServiceWorker[Service Worker] -- Caching --> Client
@@ -17,7 +18,11 @@ graph TD
         TaskList[Task List Component]
         AIChat[AI Chat Component]
         ThemeSwitch[Theme Switcher]
+        ReminderSystem[Email Reminder System]
     end
+    
+    ReminderSystem -- Schedules --> EmailNotifications[Email Notifications]
+    EmailNotifications -- Sends via --> EmailJS
 ```
 
 ## Core Technical Patterns
@@ -118,7 +123,86 @@ The UI implements several consistent visual patterns:
 - **Consistent Spacing**: Standard gap measurements between components
 - **Responsive Breakpoints**: Specific adaptations at mobile breakpoints
 
-### 8. Date Handling Architecture
+### 8. Email Reminder Architecture
+
+The application implements a comprehensive email reminder system that automatically notifies users about upcoming tasks:
+
+```mermaid
+graph TD
+    TaskCreation[Task Creation] --> DueDateCheck{Has Due Date & Time?}
+    DueDateCheck -- Yes --> ReminderScheduling[Schedule Reminder]
+    DueDateCheck -- No --> NoReminder[No Reminder Needed]
+    
+    TaskUpdate[Task Update] --> CancelExisting[Cancel Existing Reminder]
+    CancelExisting --> UpdatedDueDateCheck{Updated with Due Date & Time?}
+    UpdatedDueDateCheck -- Yes --> RescheduleReminder[Reschedule Reminder]
+    UpdatedDueDateCheck -- No --> NoReschedule[No Reschedule Needed]
+    
+    TaskCompletion[Task Completion] --> CompletionCheck{Marking Complete?}
+    CompletionCheck -- Yes --> CancelReminder[Cancel Reminder]
+    CompletionCheck -- No --> UncompletionCheck{Has Due Date & Time?}
+    UncompletionCheck -- Yes --> RescheduleOnUncompletion[Reschedule Reminder]
+    UncompletionCheck -- No --> NoRescheduleNeeded[No Reschedule Needed]
+    
+    TaskDeletion[Task Deletion] --> DeleteReminder[Cancel Reminder]
+    
+    ReminderScheduling --> TimeCheck{Reminder Time in Future?}
+    TimeCheck -- Yes --> ScheduleTimeout[Create Timeout]
+    TimeCheck -- No --> SkipReminder[Skip Reminder]
+    
+    ScheduleTimeout --> StoreTimeoutID[Store Timeout ID]
+    ScheduleTimeout --> TrackReminderState[Track Reminder State]
+    
+    ReminderReached[Reminder Time Reached] --> SendEmail[Send Email via EmailJS]
+    SendEmail --> MarkSent[Mark Reminder as Sent]
+    MarkSent --> PersistSentStatus[Save to localStorage]
+    
+    AppInit[Application Initialization] --> LoadSentReminders[Load Sent Reminders from localStorage]
+    AppInit --> RescheduleAllReminders[Reschedule All Active Reminders]
+```
+
+#### Key Components
+
+- **Scheduling System**:
+  - `scheduleTaskReminder(task)`: Core scheduling function that calculates when to send reminders
+  - `cancelTaskReminder(taskId)`: Cancels scheduled reminders and cleans up resources
+  - `scheduleAllReminders()`: Reschedules all active reminders on page load
+  - `reminderTracking` object: Tracks timeout IDs and sent status with persistence
+
+- **Email Delivery**:
+  - `sendTaskReminderEmail(task)`: Formats and sends emails via EmailJS
+  - EmailJS integration with template configuration
+  - Professional formatting of task details
+
+- **Task Lifecycle Integration**:
+  - Automatic scheduling during task creation
+  - Cancellation and rescheduling during task updates
+  - Proper cleanup during task deletion
+  - Toggle behavior during task completion/uncompleting
+
+- **State Persistence**:
+  - localStorage-based tracking of sent reminders
+  - Session-independent reminder state
+  - TimeoutID tracking for proper cancellation
+
+#### Implementation Patterns
+
+- **Time Calculation**:
+  - Reminders scheduled 30 minutes before task due time
+  - Date and time components extracted to create precise DateTime objects
+  - Future verification to avoid scheduling past reminders
+
+- **Error Handling**:
+  - Graceful failure when EmailJS is unavailable
+  - User feedback for email sending success/failure
+  - Safe localStorage access with try/catch blocks
+
+- **Resource Management**:
+  - Cleanup of setTimeout resources to prevent memory leaks
+  - Proper tracking of scheduled reminders
+  - Efficient rescheduling when app reloads
+
+### 9. Date Handling Architecture
 
 The application uses a sophisticated approach to date parsing and handling, now enhanced with user confirmation:
 

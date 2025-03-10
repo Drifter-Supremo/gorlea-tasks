@@ -27,6 +27,11 @@
 let OPENAI_API_KEY = localStorage.getItem('openai-api-key') || '';
 const OPENAI_MODEL = 'gpt-4o-mini';
 
+// EmailJS Configuration
+const EMAILJS_SERVICE_ID = 'service_kyfgnn8';
+const EMAILJS_TEMPLATE_ID = 'template_bi9oclp';
+const EMAILJS_PUBLIC_KEY = 'wNTF0D_dL47gGbSc0';
+
 // Function to set the OpenAI API key
 function setOpenAIApiKey(key) {
     OPENAI_API_KEY = key;
@@ -85,6 +90,150 @@ let deviceId = null; // Unique identifier for this device
 let originalTaskText = ''; // Store the original task text for reference
 let currentParsedTask = null; // Store the parsed task while showing the date/time modal
 
+// Initialize EmailJS
+function initEmailJS() {
+    try {
+        emailjs.init(EMAILJS_PUBLIC_KEY);
+        console.log('EmailJS initialized successfully');
+        return true;
+    } catch (error) {
+        console.error('Error initializing EmailJS:', error);
+        return false;
+    }
+}
+
+// Store reminder timeouts and tracking info
+const reminderTracking = {
+    timeouts: {}, // Store setTimeout ids by taskId
+    sent: new Set(), // Track which reminders have been sent
+    
+    // Save tracking data to localStorage
+    save() {
+        try {
+            localStorage.setItem('reminder-sent', JSON.stringify([...this.sent]));
+        } catch (error) {
+            console.warn('Could not save reminder tracking to localStorage:', error);
+        }
+    },
+    
+    // Load tracking data from localStorage
+    load() {
+        try {
+            const sentReminders = JSON.parse(localStorage.getItem('reminder-sent') || '[]');
+            this.sent = new Set(sentReminders);
+        } catch (error) {
+            console.warn('Could not load reminder tracking from localStorage:', error);
+            this.sent = new Set();
+        }
+    }
+};
+
+// Schedule an email reminder for a task
+function scheduleTaskReminder(task) {
+    // Cancel any existing reminder for this task
+    cancelTaskReminder(task.id);
+    
+    // Only schedule reminders for tasks with both due date and time
+    if (!task.dueDate || !task.dueTime || task.completed) {
+        console.log('Not scheduling reminder for task:', task.id, '- missing date/time or task completed');
+        return;
+    }
+    
+    // Check if reminder was already sent for this task
+    if (reminderTracking.sent.has(task.id)) {
+        console.log('Reminder already sent for task:', task.id);
+        return;
+    }
+    
+    // Calculate when the task is due
+    const [hours, minutes] = task.dueTime.split(':').map(Number);
+    const dueDate = new Date(task.dueDate);
+    dueDate.setHours(hours, minutes, 0, 0);
+    
+    // Calculate when to send the reminder (30 minutes before due time)
+    const reminderTime = new Date(dueDate);
+    reminderTime.setMinutes(reminderTime.getMinutes() - 30);
+    
+    const now = new Date();
+    
+    // Only schedule future reminders
+    if (reminderTime <= now) {
+        console.log('Not scheduling reminder for task:', task.id, '- reminder time is in the past');
+        return;
+    }
+    
+    // Calculate milliseconds until reminder
+    const timeUntilReminder = reminderTime.getTime() - now.getTime();
+    
+    console.log(`Scheduling reminder for task "${task.title}" to be sent in ${Math.round(timeUntilReminder/60000)} minutes`);
+    
+    // Set timeout to send email
+    const timeoutId = setTimeout(() => {
+        sendTaskReminderEmail(task);
+        // Mark as sent
+        reminderTracking.sent.add(task.id);
+        reminderTracking.save();
+        // Clear from tracking
+        delete reminderTracking.timeouts[task.id];
+    }, timeUntilReminder);
+    
+    // Store timeout ID for potential cancellation
+    reminderTracking.timeouts[task.id] = timeoutId;
+}
+
+// Send a reminder email for a task
+function sendTaskReminderEmail(task) {
+    // Format the date and time for email
+    const dueDateObj = new Date(task.dueDate);
+    const month = dueDateObj.toLocaleString('en-US', { month: 'long' });
+    const day = dueDateObj.getDate();
+    const daySuffix = getDaySuffix(day);
+    const year = dueDateObj.getFullYear();
+    const formattedDate = `${month} ${day}${daySuffix}, ${year}`;
+    const formattedTime = task.dueTime ? formatTime(task.dueTime) : '';
+    const formattedDateTime = formattedTime ? `${formattedDate} at ${formattedTime}` : formattedDate;
+    
+    // Prepare template parameters
+    const templateParams = {
+        task_title: task.title,
+        task_due_date: formattedDateTime,
+        task_priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1), // Capitalize first letter
+        task_notes: task.notes || task.description || 'No additional details'
+    };
+    
+    console.log('Sending reminder email for task:', task.id, task.title);
+    
+    // Send the email
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+        .then(response => {
+            console.log('Email sent successfully:', response);
+            showFeedback("Reminder email sent!", "success");
+        })
+        .catch(error => {
+            console.error('Error sending email:', error);
+            showFeedback("Could not send reminder email", "error");
+        });
+}
+
+// Cancel a scheduled reminder
+function cancelTaskReminder(taskId) {
+    if (reminderTracking.timeouts[taskId]) {
+        clearTimeout(reminderTracking.timeouts[taskId]);
+        delete reminderTracking.timeouts[taskId];
+        console.log('Cancelled reminder for task:', taskId);
+    }
+}
+
+// Reschedule all reminders (call on page load)
+function scheduleAllReminders() {
+    console.log('Scheduling reminders for all tasks with due dates and times...');
+    tasks.forEach(task => {
+        if (task.dueDate && task.dueTime && !task.completed) {
+            scheduleTaskReminder(task);
+        }
+    });
+}
+
 // Initialize the app
 function init() {
     console.log('Initializing app...');
@@ -92,6 +241,12 @@ function init() {
     loadThemePreference();
     addEventListeners();
     setupOnlineListener();
+    
+    // Initialize EmailJS
+    const emailJSInitialized = initEmailJS();
+    
+    // Load reminder tracking from localStorage
+    reminderTracking.load();
     
     // Show app is ready
     console.log('App initialized successfully');
@@ -201,7 +356,7 @@ function setupFirebaseConnectionMonitoring() {
     }, 7000);
 }
 
-// Load tasks from Firebase Realtime Database
+    // Load tasks from Firebase Realtime Database
 function loadTasksFromFirebase() {
     if (!db) {
         console.warn('Firebase database not initialized');
@@ -244,6 +399,9 @@ function loadTasksFromFirebase() {
                 console.log('No tasks found in Firebase');
             }
             renderTasks();
+            
+            // Schedule email reminders for tasks with due dates/times
+            scheduleAllReminders();
         })
         .catch(error => {
             clearTimeout(timeoutId); // Clear the timeout since we got a response (an error)
@@ -708,6 +866,11 @@ function addParsedTask(parsedTask, originalText) {
     // Add the task to the local array
     tasks.unshift(newTask);
     
+    // Schedule email reminder if the task has a due date and time
+    if (newTask.dueDate && newTask.dueTime) {
+        scheduleTaskReminder(newTask);
+    }
+    
     // Render immediately to show the user their task was added
     renderTasks();
     showFeedback("Task added! Saving to cloud...", "info");
@@ -720,6 +883,7 @@ function addParsedTask(parsedTask, originalText) {
             } else {
                 // Remove task from array if sync failed
                 tasks = tasks.filter(t => t.id !== taskId);
+                cancelTaskReminder(taskId); // Cancel any scheduled reminder
                 renderTasks();
                 showFeedback("Could not save task. Please check your internet connection.", "error");
             }
@@ -728,6 +892,7 @@ function addParsedTask(parsedTask, originalText) {
             console.error('Error during cloud sync:', error);
             // Remove task from array if sync failed
             tasks = tasks.filter(t => t.id !== taskId);
+            cancelTaskReminder(taskId); // Cancel any scheduled reminder
             renderTasks();
             showFeedback("Could not save task. Please check your internet connection.", "error");
         });
@@ -746,8 +911,17 @@ function updateTask(taskId, updatedFields) {
         return;
     }
 
+    // Cancel any existing reminder for this task
+    cancelTaskReminder(taskId);
+    
     // Update the task in the local array
     tasks[taskIndex] = { ...tasks[taskIndex], ...updatedFields };
+    
+    // If the updated task has due date and time, schedule a new reminder
+    const updatedTask = tasks[taskIndex];
+    if (updatedTask.dueDate && updatedTask.dueTime && !updatedTask.completed) {
+        scheduleTaskReminder(updatedTask);
+    }
     
     // Sync to Firebase
     syncTasksToCloud().then(success => {
@@ -780,6 +954,9 @@ function deleteTask(taskId) {
         showFeedback("Cannot delete task - you are offline.", "error");
         return;
     }
+    
+    // Cancel any scheduled reminder for this task
+    cancelTaskReminder(taskId);
     
     // First make a backup of the current tasks
     const tasksCopy = [...tasks];
@@ -825,6 +1002,15 @@ function completeTask(taskId) {
     
     // Update the task in the local array
     tasks[taskIndex] = { ...task, completed: newCompletedState };
+    
+    // If task is being completed, cancel any scheduled reminder
+    if (newCompletedState) {
+        cancelTaskReminder(taskId);
+    } else if (task.dueDate && task.dueTime) {
+        // If task is being un-completed and has a due date/time, reschedule reminder
+        scheduleTaskReminder(tasks[taskIndex]);
+    }
+    
     renderTasks(); // Update UI immediately
     
     // Sync to Firebase

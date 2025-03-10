@@ -47,14 +47,22 @@ Gorlea functions as a productivity partner that:
 - Provides assistance beyond task management
 - Helps users stay organized without additional effort
 
-### 4. Cloud Synchronization
+### 4. Proactive Reminders
+The email reminder system ensures users never miss important deadlines:
+- Automatically sends email notifications 30 minutes before task due times
+- Professionally formatted emails with all task details
+- Seamless integration with task lifecycle (creation, completion, updates)
+- Persistence across sessions through localStorage tracking
+- Clean error handling and user feedback
+
+### 5. Cloud Synchronization
 Firebase integration ensures:
 - Tasks stay synchronized across all devices
 - Changes appear in real-time
 - Data persists even after browser refreshes
 - Offline functionality when internet is unavailable
 
-### 5. Progressive Web App
+### 6. Progressive Web App
 The PWA architecture delivers:
 - Installation on home screens without app stores
 - Offline functionality

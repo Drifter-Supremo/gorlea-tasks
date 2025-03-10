@@ -61,6 +61,20 @@
 - Update task creation only after explicit user confirmation
 - Ensure the modal is responsive and works well on mobile devices
 
+### Email Reminder Patterns
+- Schedule reminders 30 minutes before task due time
+- Only schedule reminders for tasks with both dueDate and dueTime
+- Cancel reminders when tasks are completed, deleted, or updated
+- Reschedule reminders when tasks are marked incomplete or due dates/times change
+- Track sent reminders in localStorage to prevent duplicate notifications
+- Use consistent email formatting with all relevant task details
+- Include proper date/time formatting with ordinal suffixes in emails
+- Provide clear user feedback for email sending success/failure
+- Properly manage setTimeout resources to prevent memory leaks
+- Reschedule all active reminders when the application initializes
+- Verify reminder times are in the future before scheduling
+- Implement graceful error handling for email delivery failures
+
 ### Task Data Structure
 - Tasks must include: id, title, createdAt, completed, priority fields
 - Optional task fields: description, dueDate, dueTime, category, notes
@@ -68,6 +82,7 @@
 - Priority should be one of: "high", "medium", "low"
 - Due dates should be in ISO format (YYYY-MM-DD)
 - Date handling should always consider current date context
+- Task lifecycle events should manage reminders appropriately
 
 ## User Preferences
 

@@ -25,6 +25,7 @@ Gorlea Tasks uses a modern web technology stack focused on client-side functiona
 | Express.js | Node.js web framework | API routing in Cloud Functions |
 | Axios | HTTP client | API requests to OpenAI |
 | CORS | HTTP header mechanism | Cross-origin resource sharing for API access |
+| EmailJS | Email delivery service | Sending task reminder notifications |
 
 ### AI Integration
 
