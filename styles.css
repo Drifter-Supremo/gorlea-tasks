@@ -657,6 +657,28 @@ input:checked + .slider:before {
     font-style: italic;
 }
 
+/* Email input container styling */
+.email-input-container {
+    margin-bottom: 15px;
+}
+
+.email-input-container input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    font-size: 1rem;
+    background-color: var(--input-bg);
+    color: var(--input-text);
+}
+
+.validation-message {
+    color: var(--danger-color);
+    font-size: 0.85rem;
+    margin-top: 5px;
+    min-height: 20px;
+}
+
 /* Modal styling */
 .modal {
     display: none;

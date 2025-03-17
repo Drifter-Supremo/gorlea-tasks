@@ -32,6 +32,21 @@ const EMAILJS_SERVICE_ID = 'service_kyfgnn8';
 const EMAILJS_TEMPLATE_ID = 'template_bi9oclp';
 const EMAILJS_PUBLIC_KEY = 'wNTF0D_dL47gGbSc0';
 
+// User's reminder email
+let REMINDER_EMAIL = localStorage.getItem('reminder-email') || '';
+
+// Function to set the reminder email
+function setReminderEmail(email) {
+    REMINDER_EMAIL = email;
+    localStorage.setItem('reminder-email', email);
+    console.log('Reminder email set successfully:', email);
+}
+
+// Check if reminder email is set
+function isReminderEmailSet() {
+    return REMINDER_EMAIL && REMINDER_EMAIL.trim() !== '';
+}
+
 // Function to set the OpenAI API key
 function setOpenAIApiKey(key) {
     OPENAI_API_KEY = key;
@@ -183,6 +198,13 @@ function scheduleTaskReminder(task) {
 
 // Send a reminder email for a task
 function sendTaskReminderEmail(task) {
+    // Check if email is set
+    if (!isReminderEmailSet()) {
+        console.warn('Cannot send email reminder - no email address set');
+        showEmailModal();
+        return;
+    }
+    
     // Format the date and time for email
     const dueDateObj = new Date(task.dueDate);
     const month = dueDateObj.toLocaleString('en-US', { month: 'long' });
@@ -195,6 +217,7 @@ function sendTaskReminderEmail(task) {
     
     // Prepare template parameters
     const templateParams = {
+        to_email: REMINDER_EMAIL,
         task_title: task.title,
         task_due_date: formattedDateTime,
         task_priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1), // Capitalize first letter
@@ -234,6 +257,66 @@ function scheduleAllReminders() {
     });
 }
 
+// Show email collection modal
+function showEmailModal() {
+    // Clear any validation message
+    document.getElementById('email-validation-message').textContent = '';
+    
+    // Show the modal
+    const modal = document.getElementById('email-modal');
+    modal.style.display = 'block';
+    
+    // Focus on the email input
+    document.getElementById('reminder-email').focus();
+    
+    // Set up event listeners
+    setupEmailModalListeners();
+}
+
+// Setup event listeners for email modal
+function setupEmailModalListeners() {
+    const saveBtn = document.getElementById('save-email-btn');
+    const skipBtn = document.getElementById('skip-email-btn');
+    const emailInput = document.getElementById('reminder-email');
+    
+    // Remove any existing event listeners
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+    
+    const newSkipBtn = skipBtn.cloneNode(true);
+    skipBtn.parentNode.replaceChild(newSkipBtn, skipBtn);
+    
+    // Add new event listeners
+    newSaveBtn.addEventListener('click', () => {
+        const email = emailInput.value.trim();
+        if (validateEmail(email)) {
+            setReminderEmail(email);
+            document.getElementById('email-modal').style.display = 'none';
+            showFeedback("Email saved successfully! You'll receive reminders for upcoming tasks.", "success");
+        } else {
+            document.getElementById('email-validation-message').textContent = 'Please enter a valid email address';
+        }
+    });
+    
+    newSkipBtn.addEventListener('click', () => {
+        document.getElementById('email-modal').style.display = 'none';
+    });
+    
+    // Add enter key support
+    emailInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            newSaveBtn.click();
+        }
+    });
+}
+
+// Validate email format
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
 // Initialize the app
 function init() {
     console.log('Initializing app...');
@@ -247,6 +330,14 @@ function init() {
     
     // Load reminder tracking from localStorage
     reminderTracking.load();
+    
+    // Check if user has set their email for reminders
+    if (!isReminderEmailSet() && emailJSInitialized) {
+        // Set a slight delay to show the email modal after app initialization
+        setTimeout(() => {
+            showEmailModal();
+        }, 1000);
+    }
     
     // Show app is ready
     console.log('App initialized successfully');

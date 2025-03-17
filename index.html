@@ -57,6 +57,25 @@
     <div id="task-list" class="task-list"></div>
 </div>
         
+        <!-- Email Collection Modal -->
+        <div id="email-modal" class="modal">
+            <div class="modal-content">
+                <h3>Email for Task Reminders</h3>
+                <p>Enter your email address to receive reminders about upcoming tasks:</p>
+                
+                <div class="email-input-container">
+                    <input type="email" id="reminder-email" placeholder="youremail@example.com" required>
+                    <div id="email-validation-message" class="validation-message"></div>
+                </div>
+                
+                <!-- Buttons -->
+                <div class="modal-actions">
+                    <button id="save-email-btn" class="primary-btn">Save Email</button>
+                    <button id="skip-email-btn" class="secondary-btn">Skip for Now</button>
+                </div>
+            </div>
+        </div>
+        
         <!-- Date/Time Confirmation Modal -->
         <div id="date-time-modal" class="modal">
             <div class="modal-content">
