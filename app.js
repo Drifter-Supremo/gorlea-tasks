@@ -666,36 +666,12 @@ function showDateTimeModal(parsedTask, taskText) {
     // Populate time options
     populateTimeOptions();
     
-    // Reset any previously selected date options
-    document.querySelectorAll('.date-option.selected').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    
     // Set initial date value if AI detected one
     const datePicker = document.getElementById('date-picker');
     if (parsedTask.dueDate) {
         // Extract just the date part of the ISO string
         const dateOnly = parsedTask.dueDate.split('T')[0];
         datePicker.value = dateOnly;
-        
-        // Set the appropriate quick select button if it matches
-        const today = new Date();
-        const tomorrow = new Date();
-        tomorrow.setDate(today.getDate() + 1);
-        const nextWeek = new Date();
-        nextWeek.setDate(today.getDate() + 7);
-        
-        const todayStr = today.toISOString().split('T')[0];
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        const nextWeekStr = nextWeek.toISOString().split('T')[0];
-        
-        if (dateOnly === todayStr) {
-            document.querySelector('.date-option[data-option="today"]').classList.add('selected');
-        } else if (dateOnly === tomorrowStr) {
-            document.querySelector('.date-option[data-option="tomorrow"]').classList.add('selected');
-        } else if (dateOnly === nextWeekStr) {
-            document.querySelector('.date-option[data-option="next-week"]').classList.add('selected');
-        }
     }
     
     // Set initial time value if AI detected one
@@ -715,49 +691,13 @@ function showDateTimeModal(parsedTask, taskText) {
     const modal = document.getElementById('date-time-modal');
     modal.style.display = 'block';
     
-    // Set up event listeners for the date option buttons
-    setupDateOptionListeners();
+    // Set up event listeners for the confirm and cancel buttons
+    setupModalListeners();
 }
 
-// Setup event listeners for date option buttons
-function setupDateOptionListeners() {
-    document.querySelectorAll('.date-option').forEach(button => {
-        // Remove any existing event listeners first
-        const newButton = button.cloneNode(true);
-        button.parentNode.replaceChild(newButton, button);
-        
-        newButton.addEventListener('click', () => {
-            // Clear existing selection
-            document.querySelectorAll('.date-option.selected').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            
-            // Add selected class
-            newButton.classList.add('selected');
-            
-            // Get the date picker
-            const datePicker = document.getElementById('date-picker');
-            
-            // Set date based on option
-            const option = newButton.dataset.option;
-            if (option === 'today') {
-                const today = new Date();
-                datePicker.value = today.toISOString().split('T')[0];
-            } else if (option === 'tomorrow') {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                datePicker.value = tomorrow.toISOString().split('T')[0];
-            } else if (option === 'next-week') {
-                const nextWeek = new Date();
-                nextWeek.setDate(nextWeek.getDate() + 7);
-                datePicker.value = nextWeek.toISOString().split('T')[0];
-            } else if (option === 'no-date') {
-                datePicker.value = '';
-            }
-        });
-    });
+// Setup event listeners for modal buttons
+function setupModalListeners() {
     
-    // Set up confirm and cancel buttons
     const confirmBtn = document.getElementById('confirm-task-btn');
     const cancelBtn = document.getElementById('cancel-task-btn');
     
